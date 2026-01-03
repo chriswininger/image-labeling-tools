@@ -7,7 +7,7 @@ import picocli.CommandLine.Spec;
 
 @TopCommand
 @Command(name = "app", mixinStandardHelpOptions = true, 
-         subcommands = {GreetingCommand.class, TransactionCommand.class, StoryCommand.class})
+         subcommands = { GenerateImageTagsCommand.class })
 public class MainCommand implements Runnable {
 
     @Spec
@@ -17,8 +17,7 @@ public class MainCommand implements Runnable {
     public void run() {
         // Default to greeting command when no subcommand is specified
         // This preserves the behavior where running with no args runs greeting
-        GreetingCommand greeting = new GreetingCommand();
-        greeting.name = "picocli"; // Set default value
+        GenerateImageTagsCommand greeting = new GenerateImageTagsCommand();
         greeting.run();
     }
 }
