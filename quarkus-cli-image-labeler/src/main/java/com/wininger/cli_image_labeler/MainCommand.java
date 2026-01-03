@@ -7,7 +7,7 @@ import picocli.CommandLine.Spec;
 
 @TopCommand
 @Command(name = "app", mixinStandardHelpOptions = true, 
-         subcommands = {GreetingCommand.class, TransactionCommand.class})
+         subcommands = {GreetingCommand.class, TransactionCommand.class, StoryCommand.class})
 public class MainCommand implements Runnable {
 
     @Spec
