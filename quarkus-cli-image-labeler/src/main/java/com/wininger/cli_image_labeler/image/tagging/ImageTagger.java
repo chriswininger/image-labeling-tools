@@ -1,6 +1,6 @@
 package com.wininger.cli_image_labeler.image.tagging;
 
-import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.image.Image;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 
@@ -14,5 +14,5 @@ import dev.langchain4j.service.UserMessage;
     """)
 public interface ImageTagger {
     @UserMessage("Generate tags based on this image {{it}}")
-    ImageInfo generateTags(ImageContent imageContent);
+    ImageInfo generateTags(Image image);
 }
