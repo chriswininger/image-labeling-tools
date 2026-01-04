@@ -10,8 +10,11 @@ import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.ImageTagger;
 
 import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.request.ResponseFormat;
 import dev.langchain4j.model.chat.request.ResponseFormatType;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.output.JsonSchemas;
@@ -36,14 +39,22 @@ public class GenerateImageTagsCommand implements Runnable {
             .responseFormat(responseFormat)
             .build();
 
-
-        ImageTagger imageTagger = AiServices.builder(ImageTagger.class)
+        final ImageContent imageContent = getImageContent(imagePath);
+        /*ImageTagger imageTagger = AiServices.builder(ImageTagger.class)
             .chatModel(model)
             .build();
 
-        final ImageContent imageContent = getImageContent(imagePath);
+
         final ImageInfo imageInfo = imageTagger.generateTags(imageContent);
         System.out.println("Image Info: " + imageInfo);
+        */
+
+        final TextContent question = TextContent.from("What do you see in the image?");
+        final UserMessage userMessage = UserMessage.from(question, imageContent);
+        final ChatResponse chatResponse = model.chat(userMessage);
+    
+        System.out.println("Plain Text:");
+        System.out.println(chatResponse.aiMessage().text());
     }
 
     private String getMimeType(final String imagePath) {
@@ -65,7 +76,14 @@ public class GenerateImageTagsCommand implements Runnable {
             final String base64Img = Base64.getEncoder().encodeToString(bytes);
             final String mimeType = getMimeType(imagePath);
 
-            return ImageContent.from(base64Img, mimeType);
+            // Try using the file path directly - Ollama supports file paths
+            // If that doesn't work, fall back to base64
+            Path path = Paths.get(imagePath);
+            if (path.isAbsolute()) {
+                return ImageContent.from(path.toUri().toString());
+            } else {
+                return ImageContent.from(base64Img, mimeType);
+            }
         } catch(IOException ex) {
             throw new RuntimeException("Could not parse image: " + imagePath);
         }

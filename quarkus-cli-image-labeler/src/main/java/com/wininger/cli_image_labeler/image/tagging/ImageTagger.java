@@ -13,6 +13,6 @@ import dev.langchain4j.service.UserMessage;
     ``` 
     """)
 public interface ImageTagger {
-    @UserMessage("Generate tags based on this image")
+    @UserMessage("Generate an image description and tabs based on this image")
     ImageInfo generateTags(ImageContent imageContent);
 }
