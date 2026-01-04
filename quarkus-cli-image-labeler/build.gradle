@@ -12,7 +12,14 @@ dependencies {
     implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
     implementation 'io.quarkus:quarkus-picocli'
     implementation 'io.quarkus:quarkus-arc'
-
+    implementation 'io.quarkus:quarkus-hibernate-orm'
+    implementation 'io.quarkus:quarkus-flyway'
+    
+    // SQLite JDBC driver
+    implementation 'org.xerial:sqlite-jdbc:3.44.1.0'
+    // Hibernate SQLite dialect
+    implementation 'org.hibernate.orm:hibernate-community-dialects:6.4.4.Final'
+ 
     implementation 'io.quarkiverse.langchain4j:quarkus-langchain4j-ollama:1.5.0.CR2'
 
     testImplementation 'io.quarkus:quarkus-junit5'
