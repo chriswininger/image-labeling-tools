@@ -35,6 +35,7 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
         <img
           src={thumbnailUrl}
           alt={image.description || 'Image'}
+          title={image.description || ''}
           className="thumbnail-image"
           onError={() => setError('Failed to load image')}
         />
