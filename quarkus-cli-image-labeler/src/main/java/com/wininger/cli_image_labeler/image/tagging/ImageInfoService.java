@@ -26,6 +26,9 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.service.output.JsonSchemas;
 
+import jakarta.enterprise.context.ApplicationScoped;
+
+@ApplicationScoped
 public class ImageInfoService {
      // Maximum dimension (width or height) for resized images to avoid timeouts
      private static final int MAX_IMAGE_DIMENSION = 600;
