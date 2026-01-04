@@ -33,18 +33,22 @@ public class ImageInfoService {
      // Maximum dimension (width or height) for resized images to avoid timeouts
      private static final int MAX_IMAGE_DIMENSION = 600;
 
-    public ImageInfo generateImageInfo(final String imagePath) {
-        final var responseFormat = ResponseFormat.builder()
-        .type(ResponseFormatType.JSON)
-        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfo.class).get())
-        .build();
+    private final OllamaChatModel model;
 
-        final var model = OllamaChatModel.builder()
+    public ImageInfoService() {
+        final var responseFormat = ResponseFormat.builder()
+            .type(ResponseFormatType.JSON)
+            .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfo.class).get())
+            .build();
+
+        model = OllamaChatModel.builder()
             .modelName("gemma3:4b")
             .baseUrl("http://localhost:11434/")
             .responseFormat(responseFormat)
             .build();
+    }
 
+    public ImageInfo generateImageInfo(final String imagePath) {
         final ImageContent imageContent = getImageContent(imagePath);
 
         final TextContent question = TextContent.from(
