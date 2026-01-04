@@ -1,10 +1,18 @@
 package com.wininger.cli_image_labeler;
 
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
@@ -24,6 +32,9 @@ import picocli.CommandLine.Parameters;
 public class GenerateImageTagsCommand implements Runnable {
     @Parameters(paramLabel = "<image-path>", description = "The path to an image you want to identify")
     String imagePath;
+
+    // Maximum dimension (width or height) for resized images to avoid timeouts
+    private static final int MAX_IMAGE_DIMENSION = 600;
 
     @Override
     public void run() {
@@ -48,6 +59,7 @@ public class GenerateImageTagsCommand implements Runnable {
         System.out.println("Image Info: " + imageInfo);
         */
 
+        System.out.println("got image");
         final TextContent question = TextContent.from(
             "Generate an image description and tags based on this image. " +
             "You are a bot that tags images. You can create your own tags based on what you see but, " +
@@ -70,35 +82,108 @@ public class GenerateImageTagsCommand implements Runnable {
         }
     }
 
-    private String getMimeType(final String imagePath) {
+    private ImageContent getImageContent(final String imagePath) {
         try {
-            final String mimeType = Files.probeContentType(Path.of(imagePath));
-            if (mimeType == null) {
-                throw new RuntimeException("Couldn't extract mimetype from (value null): " + imagePath);
+            // Get original file size
+            final long originalFileSize = Files.size(Paths.get(imagePath));
+            
+            // Load and resize the image
+            final BufferedImage originalImage = ImageIO.read(Paths.get(imagePath).toFile());
+            if (originalImage == null) {
+                throw new RuntimeException("Could not read image: " + imagePath);
             }
-
-            return mimeType;
+            
+            final int originalWidth = originalImage.getWidth();
+            final int originalHeight = originalImage.getHeight();
+            
+            final BufferedImage resizedImage = resizeImage(originalImage, MAX_IMAGE_DIMENSION);
+            
+            final int resizedWidth = resizedImage.getWidth();
+            final int resizedHeight = resizedImage.getHeight();
+            
+            // Convert resized image to JPEG with compression for smaller file size
+            // Always use JPEG to ensure good compression regardless of source format
+            final byte[] imageBytes = imageToJpegBytes(resizedImage, 0.85f); // 85% quality
+            final long resizedFileSize = imageBytes.length;
+            
+            // Log the resize information
+            System.out.printf("Image resize: %dx%d (%.1f KB) -> %dx%d (%.1f KB)%n",
+                originalWidth, originalHeight, originalFileSize / 1024.0,
+                resizedWidth, resizedHeight, resizedFileSize / 1024.0);
+            
+            final String base64Img = Base64.getEncoder().encodeToString(imageBytes);
+            final long base64Size = base64Img.length();
+            System.out.printf("Base64 size: %.1f KB%n", base64Size / 1024.0);
+            
+            return ImageContent.from(base64Img, "image/jpeg");
         } catch(IOException ex) {
-            throw new RuntimeException("Couldn't extract mimetype from: " + imagePath);
+            throw new RuntimeException("Could not parse image: " + imagePath, ex);
         }
     }
 
-    private ImageContent getImageContent(final String imagePath) {
-        try {
-            final byte[] bytes = Files.readAllBytes(Paths.get(imagePath));
-            final String base64Img = Base64.getEncoder().encodeToString(bytes);
-            final String mimeType = getMimeType(imagePath);
-
-            // Try using the file path directly - Ollama supports file paths
-            // If that doesn't work, fall back to base64
-            Path path = Paths.get(imagePath);
-            if (path.isAbsolute()) {
-                return ImageContent.from(path.toUri().toString());
-            } else {
-                return ImageContent.from(base64Img, mimeType);
-            }
-        } catch(IOException ex) {
-            throw new RuntimeException("Could not parse image: " + imagePath);
+    /**
+     * Resizes an image to fit within the maximum dimension while maintaining aspect ratio.
+     * If the image is already smaller, returns the original.
+     */
+    private BufferedImage resizeImage(final BufferedImage originalImage, final int maxDimension) {
+        final int originalWidth = originalImage.getWidth();
+        final int originalHeight = originalImage.getHeight();
+        
+        // If image is already smaller than max dimension, return original
+        if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
+            return originalImage;
         }
+        
+        // Calculate new dimensions maintaining aspect ratio
+        final double scale = Math.min(
+            (double) maxDimension / originalWidth,
+            (double) maxDimension / originalHeight
+        );
+        
+        final int newWidth = (int) (originalWidth * scale);
+        final int newHeight = (int) (originalHeight * scale);
+        
+        // Create resized image with better quality rendering
+        final BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
+        
+        final Graphics2D g2d = resizedImage.createGraphics();
+        try {
+            // Use high-quality rendering hints
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
+        } finally {
+            g2d.dispose();
+        }
+        
+        return resizedImage;
+    }
+
+    /**
+     * Converts a BufferedImage to a JPEG byte array with specified quality.
+     * This ensures good compression regardless of source format.
+     */
+    private byte[] imageToJpegBytes(final BufferedImage image, final float quality) throws IOException {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        
+        // Get JPEG writer
+        final ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+        final ImageWriteParam param = writer.getDefaultWriteParam();
+        
+        // Enable compression
+        if (param.canWriteCompressed()) {
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+        }
+        
+        try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(image, null, null), param);
+        } finally {
+            writer.dispose();
+        }
+        
+        return baos.toByteArray();
     }
 }
