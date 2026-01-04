@@ -6,8 +6,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
-import com.wininger.cli_image_labeler.image.tagging.ImageTagger;
 
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
@@ -16,7 +16,6 @@ import dev.langchain4j.model.chat.request.ResponseFormat;
 import dev.langchain4j.model.chat.request.ResponseFormatType;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.ollama.OllamaChatModel;
-import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.output.JsonSchemas;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -49,12 +48,26 @@ public class GenerateImageTagsCommand implements Runnable {
         System.out.println("Image Info: " + imageInfo);
         */
 
-        final TextContent question = TextContent.from("What do you see in the image?");
+        final TextContent question = TextContent.from(
+            "Generate an image description and tags based on this image. " +
+            "You are a bot that tags images. You can create your own tags based on what you see but, " +
+            "be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. " +
+            "Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string)."
+        );
         final UserMessage userMessage = UserMessage.from(question, imageContent);
         final ChatResponse chatResponse = model.chat(userMessage);
     
-        System.out.println("Plain Text:");
-        System.out.println(chatResponse.aiMessage().text());
+        // Parse the JSON response into ImageInfo
+        final String jsonResponse = chatResponse.aiMessage().text();
+        try {
+            final ObjectMapper mapper = new ObjectMapper();
+            final ImageInfo imageInfo = mapper.readValue(jsonResponse, ImageInfo.class);
+            System.out.println("Image Info: " + imageInfo);
+        } catch (Exception e) {
+            System.err.println("Failed to parse JSON response: " + e.getMessage());
+            System.err.println("Raw response: " + jsonResponse);
+            throw new RuntimeException("Could not parse image info from response", e);
+        }
     }
 
     private String getMimeType(final String imagePath) {
