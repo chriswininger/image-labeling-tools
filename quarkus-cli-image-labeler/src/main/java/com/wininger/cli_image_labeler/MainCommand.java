@@ -5,7 +5,7 @@ import picocli.CommandLine.Command;
 
 @TopCommand
 @Command(name = "app", mixinStandardHelpOptions = true, 
-         subcommands = { GenerateImageTagsCommand.class })
+         subcommands = { GenerateImageTagsCommand.class, GenerateImageTagsForDirectoryCommand.class })
 public class MainCommand implements Runnable {
 
     @Override
