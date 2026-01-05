@@ -8,4 +8,5 @@ import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('electronAPI', {
   getAllImages: () => ipcRenderer.invoke('get-all-images'),
   getImageData: (imagePath: string) => ipcRenderer.invoke('get-image-data', imagePath),
+  getThumbnailPath: (thumbnailName: string) => ipcRenderer.invoke('get-thumbnail-path', thumbnailName),
 });

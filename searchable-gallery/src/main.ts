@@ -114,13 +114,36 @@ ipcMain.handle('get-all-images', async () => {
   }
   
   try {
-    const stmt = db.prepare('SELECT id, full_path, description, tags, created_at, updated_at FROM image_tags ORDER BY created_at DESC');
+    const stmt = db.prepare('SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_tags ORDER BY created_at DESC');
     const images = stmt.all();
     return images;
   } catch (error) {
     console.error('Error fetching images:', error);
     throw error;
   }
+});
+
+// IPC handler to get thumbnail path
+ipcMain.handle('get-thumbnail-path', async (event, thumbnailName: string) => {
+  // Try multiple possible paths for the thumbnail directory (similar to database path resolution)
+  const appPath = app.getAppPath();
+  const possiblePaths = [
+    path.join(appPath, 'data', 'thumbnails', thumbnailName),
+    path.join(__dirname, '..', '..', 'data', 'thumbnails', thumbnailName),
+    path.join(__dirname, '..', 'data', 'thumbnails', thumbnailName),
+    path.resolve(__dirname, '..', '..', '..', 'data', 'thumbnails', thumbnailName),
+    path.join(process.resourcesPath || __dirname, 'data', 'thumbnails', thumbnailName),
+    path.join(app.getPath('userData'), 'data', 'thumbnails', thumbnailName),
+  ];
+
+  for (const thumbPath of possiblePaths) {
+    const normalizedPath = path.normalize(thumbPath);
+    if (fs.existsSync(normalizedPath)) {
+      return normalizedPath;
+    }
+  }
+
+  throw new Error(`Thumbnail not found: ${thumbnailName}`);
 });
 
 // IPC handler to get image as data URL
