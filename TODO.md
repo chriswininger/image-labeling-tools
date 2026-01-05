@@ -23,6 +23,7 @@
     * search by tags
     * constrain by date taken ranges
     * search within scription
+* Create some kind of re-usable multi-select tool similar to https://coreui.io/react/docs/forms/multi-select/
 
 ## top level
 
