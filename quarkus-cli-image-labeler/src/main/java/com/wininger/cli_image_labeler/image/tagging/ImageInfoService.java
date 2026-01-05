@@ -11,6 +11,8 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.LinkedHashSet;
+import java.util.List;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -67,7 +69,12 @@ public class ImageInfoService
     // assuming keepThumbnails was set to true, this just determines if we store it in the db
     final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
 
-    return new ImageInfo(imageInfo.tags(), imageInfo.fullDescription(), thumbnailName);
+    // Deduplicate tags (preserve order using LinkedHashSet)
+    final List<String> deduplicatedTags = imageInfo.tags() != null
+        ? new LinkedHashSet<>(imageInfo.tags()).stream().toList()
+        : null;
+
+    return new ImageInfo(deduplicatedTags, imageInfo.fullDescription(), thumbnailName);
   }
 
   private ImageInfo generateImageInfo(final ImageContent imageContent, final String imagePath) {
