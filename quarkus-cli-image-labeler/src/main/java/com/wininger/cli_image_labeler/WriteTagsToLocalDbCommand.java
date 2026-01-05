@@ -43,12 +43,12 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     @ActivateRequestContext
     public void run() {
         final Path directory = Paths.get(directoryPath);
-        
+
         if (!Files.exists(directory)) {
             System.err.println("Error: Directory does not exist: " + directoryPath);
             return;
         }
-        
+
         if (!Files.isDirectory(directory)) {
             System.err.println("Error: Path is not a directory: " + directoryPath);
             return;
@@ -104,8 +104,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
 
             // Generate image info
-            final ImageInfo imageInfo = imageInfoService.generateImageInfo(fullPath, true);
-            
+            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(fullPath, true);
+
             if (Objects.isNull(imageInfo.tags())) {
                 throw new RuntimeException("Null tags were returned");
             }

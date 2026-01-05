@@ -33,12 +33,12 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
     @Override
     public void run() {
         final Path directory = Paths.get(directoryPath);
-        
+
         if (!Files.exists(directory)) {
             System.err.println("Error: Directory does not exist: " + directoryPath);
             return;
         }
-        
+
         if (!Files.isDirectory(directory)) {
             System.err.println("Error: Path is not a directory: " + directoryPath);
             return;
@@ -68,7 +68,7 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
     private void processImage(final Path imagePath) {
         try {
             System.out.println("\n=== Processing: " + imagePath + " ===");
-            final ImageInfo imageInfo = imageInfoService.generateImageInfo(imagePath.toString(), true);
+            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(imagePath.toString(), true);
             System.out.println("Image Info: " + imageInfo);
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());

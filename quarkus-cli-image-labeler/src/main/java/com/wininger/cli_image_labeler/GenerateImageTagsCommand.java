@@ -21,8 +21,8 @@ public class GenerateImageTagsCommand implements Runnable {
 
     @Override
     public void run() {
-        final ImageInfo imageInfo = imageInfoService.generateImageInfo(imagePath, false);
-        
+        final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(imagePath, false);
+
         System.out.println("Image Info: " + imageInfo);
     }
 }
