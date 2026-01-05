@@ -94,36 +94,8 @@ function MultiSelect({
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="multi-select-input">
-          {selectedOptions.length > 0 ? (
-            <>
-              {selectedOptions.map((option) => (
-                <span key={option.value} className="multi-select-tag">
-                  {option.label}
-                  <button
-                    type="button"
-                    className="multi-select-tag-close"
-                    onClick={(e) => handleRemoveTag(option.value, e)}
-                    aria-label={`Remove ${option.label}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {selectedOptions.length > 0 && (
-                <button
-                  type="button"
-                  className="multi-select-clear-all"
-                  onClick={handleClearAll}
-                  aria-label="Clear all selections"
-                  title="Clear all"
-                >
-                  ×
-                </button>
-              )}
-            </>
-          ) : (
-            <span className="multi-select-placeholder">{placeholder}</span>
-          )}
+          <SelectedOptions handleRemoveTag={handleRemoveTag} selectedOptions={selectedOptions} />
+
           <input
             type="text"
             className="multi-select-search"
@@ -134,72 +106,129 @@ function MultiSelect({
             placeholder={selectedOptions.length > 0 ? '' : placeholder}
           />
         </div>
-        <div className="multi-select-indicator">
-          <svg
-            width="12"
-            height="8"
-            viewBox="0 0 12 8"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M1 1L6 6L11 1"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </div>
+
+        {/* This gets roted when the parent dive has the multi-select-open class applied by
+            a CSS transfrom transform: rotate(180deg); */}
+        <DropDownChevron />
       </div>
 
-      {isOpen && (
-        <div className="multi-select-dropdown">
-          <div className="multi-select-dropdown-header">
-            <button
-              type="button"
-              className="multi-select-select-all"
-              onClick={handleSelectAll}
-            >
-              Select all options
-            </button>
-            {someFilteredSelected && (
-              <button
-                type="button"
-                className="multi-select-deselect-all"
-                onClick={handleDeselectAll}
-              >
-                Deselect all
-              </button>
-            )}
-          </div>
-          <div className="multi-select-options">
-            {filteredOptions.length === 0 ? (
-              <div className="multi-select-no-results">No results found</div>
-            ) : (
-              filteredOptions.map((option) => {
-                const isSelected = selectedValues.includes(option.value);
-                return (
-                  <label
-                    key={option.value}
-                    className={`multi-select-option ${isSelected ? 'multi-select-option-selected' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => handleToggleOption(option.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <span className="multi-select-option-label">{option.label}</span>
-                  </label>
-                );
-              })
-            )}
-          </div>
-        </div>
-      )}
+      <DropDownMenu
+        isOpen={isOpen}
+        filteredOptions={filteredOptions}
+        someFilteredSelected={someFilteredSelected}
+        selectedValues={selectedValues}
+        handleSelectAll={handleSelectAll}
+        handleDeselectAll={handleDeselectAll}
+        handleToggleOption={handleToggleOption}
+      />
     </div>
   );
+}
+
+function SelectedOptions(
+  { selectedOptions, handleRemoveTag } :
+  { selectedOptions: MultiSelectOption [], handleRemoveTag: (value: string, event: React.MouseEvent) => void}
+) {
+  if (selectedOptions.length <= 0) {
+    return null;
+  }
+
+  return <>
+    {selectedOptions.map((option) => (
+      <span key={option.value} className="multi-select-tag">
+        {option.label}
+        <button
+          type="button"
+          className="multi-select-tag-close"
+          onClick={(e) => handleRemoveTag(option.value, e)}
+          aria-label={`Remove ${option.label}`}
+        >
+          ×
+        </button>
+      </span>
+    ))}
+  </>
+}
+
+function DropDownChevron() {
+  return <div className="multi-select-indicator">
+    <svg
+      width="12"
+      height="8"
+      viewBox="0 0 12 8"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M1 1L6 6L11 1"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </div>;
+}
+
+function DropDownMenu(
+  { isOpen, filteredOptions, someFilteredSelected, selectedValues, handleSelectAll, handleDeselectAll, handleToggleOption } :
+  {
+    isOpen: boolean,
+    filteredOptions: MultiSelectOption [],
+    someFilteredSelected: boolean,
+    selectedValues: string[],
+    handleSelectAll: () => void,
+    handleDeselectAll: () => void,
+    handleToggleOption: (val: string) => void,
+  }
+) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return <div className="multi-select-dropdown">
+    <div className="multi-select-dropdown-header">
+      <button
+        type="button"
+        className="multi-select-select-all"
+        onClick={handleSelectAll}
+      >
+        Select all options
+      </button>
+      {someFilteredSelected && (
+        <button
+          type="button"
+          className="multi-select-deselect-all"
+          onClick={handleDeselectAll}
+        >
+          Deselect all
+        </button>
+      )}
+    </div>
+    <div className="multi-select-options">
+      {filteredOptions.length === 0 ? (
+        <div className="multi-select-no-results">No results found</div>
+      ) : (
+        filteredOptions.map((option) => {
+          const isSelected = selectedValues.includes(option.value);
+          return (
+            <label
+              key={option.value}
+              className={`multi-select-option ${isSelected ? 'multi-select-option-selected' : ''}`}
+            >
+              <input
+                type="checkbox"
+                checked={isSelected}
+                onChange={() => handleToggleOption(option.value)}
+                onClick={(e) => e.stopPropagation()}
+              />
+              <span className="multi-select-option-label">{option.label}</span>
+            </label>
+          );
+        })
+      )}
+    </div>
+  </div>
 }
 
 export default MultiSelect;
