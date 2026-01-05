@@ -1,0 +1,224 @@
+/* MultiSelect Component Styles */
+.multi-select-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.multi-select-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.multi-select {
+  position: relative;
+  min-height: 38px;
+  background-color: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  cursor: text;
+  display: flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.multi-select:hover {
+  border-color: #adb5bd;
+}
+
+.multi-select.multi-select-open {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.multi-select-input {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  align-items: center;
+  min-height: 24px;
+}
+
+.multi-select-placeholder {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.multi-select-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  background-color: #e7f1ff;
+  border: 1px solid #b3d7ff;
+  border-radius: 16px;
+  font-size: 0.875rem;
+  color: #004085;
+  white-space: nowrap;
+}
+
+.multi-select-tag-close {
+  background: none;
+  border: none;
+  color: #004085;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.multi-select-tag-close:hover {
+  background-color: rgba(0, 64, 133, 0.1);
+}
+
+.multi-select-clear-all {
+  background: none;
+  border: none;
+  color: #6c757d;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0.25rem;
+  margin: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.multi-select-clear-all:hover {
+  background-color: #f8f9fa;
+  color: #495057;
+}
+
+.multi-select-search {
+  flex: 1;
+  min-width: 80px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  color: #333;
+  padding: 0.25rem 0;
+}
+
+.multi-select-search::placeholder {
+  color: #6c757d;
+}
+
+.multi-select-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  padding: 0.25rem;
+  margin-left: 0.5rem;
+  pointer-events: none;
+  transition: transform 0.15s ease-in-out;
+}
+
+.multi-select.multi-select-open .multi-select-indicator {
+  transform: rotate(180deg);
+}
+
+.multi-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background-color: #fff;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 300px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.multi-select-dropdown-header {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.multi-select-select-all,
+.multi-select-deselect-all {
+  background: none;
+  border: none;
+  color: #0056b3;
+  cursor: pointer;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.15s ease-in-out;
+}
+
+.multi-select-select-all:hover,
+.multi-select-deselect-all:hover {
+  background-color: #f8f9fa;
+}
+
+.multi-select-options {
+  overflow-y: auto;
+  max-height: 240px;
+  padding: 0.25rem 0;
+}
+
+.multi-select-option {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out;
+  gap: 0.5rem;
+}
+
+.multi-select-option:hover {
+  background-color: #f8f9fa;
+}
+
+.multi-select-option-selected {
+  background-color: #e7f1ff;
+}
+
+.multi-select-option input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.multi-select-option-label {
+  font-size: 0.875rem;
+  color: #333;
+  user-select: none;
+}
+
+.multi-select-no-results {
+  padding: 0.75rem;
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
