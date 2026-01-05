@@ -28,6 +28,9 @@ public class ImageTagEntity {
     @Column(nullable = false, length = 5000)
     private String tags; // Stored as comma-separated string or JSON
     
+    @Column(name = "thumb_nail_name")
+    private String thumbnailName;
+    
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
     
@@ -39,9 +42,14 @@ public class ImageTagEntity {
     }
 
     public ImageTagEntity(String fullPath, String description, String tags) {
+        this(fullPath, description, tags, null);
+    }
+
+    public ImageTagEntity(String fullPath, String description, String tags, String thumbnailName) {
         this.fullPath = fullPath;
         this.description = description;
         this.tags = tags;
+        this.thumbnailName = thumbnailName;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -106,6 +114,14 @@ public class ImageTagEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getThumbnailName() {
+        return thumbnailName;
+    }
+
+    public void setThumbnailName(String thumbnailName) {
+        this.thumbnailName = thumbnailName;
     }
 }
 

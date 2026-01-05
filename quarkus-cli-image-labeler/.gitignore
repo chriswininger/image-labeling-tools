@@ -40,5 +40,4 @@ nb-configuration.xml
 # TLS Certificates
 .certs/
 
-# local database
-image-tags.db
+# Data directory contents are ignored via data/.gitignore

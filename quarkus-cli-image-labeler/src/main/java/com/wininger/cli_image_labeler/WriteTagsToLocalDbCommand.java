@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -103,8 +104,12 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
 
             // Generate image info
-            final ImageInfo imageInfo = imageInfoService.generateImageInfo(fullPath);
+            final ImageInfo imageInfo = imageInfoService.generateImageInfo(fullPath, true);
             
+            if (Objects.isNull(imageInfo.tags())) {
+                throw new RuntimeException("Null tags were returned");
+            }
+
             // Convert tags list to string (comma-separated)
             final String tagsString = String.join(", ", imageInfo.tags());
 
@@ -112,7 +117,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             final ImageTagEntity saved = imageTagRepository.save(
                 fullPath,
                 imageInfo.fullDescription(),
-                tagsString
+                tagsString,
+                imageInfo.thumbnailName()
             );
 
             System.out.println("Saved to database with ID: " + saved.getId());

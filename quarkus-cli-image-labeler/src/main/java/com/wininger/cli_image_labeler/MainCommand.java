@@ -12,6 +12,11 @@ import picocli.CommandLine.Command;
          })
 public class MainCommand implements Runnable {
 
+    static {
+        // Ensure data directories are created before Flyway runs
+        DataDirectoryInitializer.ensureDirectoriesExist();
+    }
+
     @Override
     public void run() {
         // If no subcommand is specified, Picocli will show the usage help automatically

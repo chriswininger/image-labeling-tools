@@ -6,7 +6,10 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 
 import javax.imageio.IIOImage;
@@ -48,8 +51,8 @@ public class ImageInfoService {
             .build();
     }
 
-    public ImageInfo generateImageInfo(final String imagePath) {
-        final ImageContent imageContent = getImageContent(imagePath);
+    public ImageInfo generateImageInfo(final String imagePath, final boolean keepThumbnails) {
+        final ImageContent imageContent = getImageContent(imagePath, keepThumbnails);
 
         final TextContent question = TextContent.from(
             "Generate an image description and tags based on this image. " +
@@ -64,8 +67,12 @@ public class ImageInfoService {
         final String jsonResponse = chatResponse.aiMessage().text();
         try {
             final ObjectMapper mapper = new ObjectMapper();
+            final ImageInfo parsedInfo = mapper.readValue(jsonResponse, ImageInfo.class);
+            
+            // Generate thumbnail filename and add it to ImageInfo
+            final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
 
-            return mapper.readValue(jsonResponse, ImageInfo.class);
+            return new ImageInfo(parsedInfo.tags(), parsedInfo.fullDescription(), thumbnailName);
         } catch (Exception e) {
             System.err.println("Failed to parse JSON response: " + e.getMessage());
             System.err.println("Raw response: " + jsonResponse);
@@ -73,7 +80,7 @@ public class ImageInfoService {
         }
     }
 
-    private ImageContent getImageContent(final String imagePath) {
+    private ImageContent getImageContent(final String imagePath, final boolean keepThumbnails) {
         try {
             // Get original file size
             final long originalFileSize = Files.size(Paths.get(imagePath));
@@ -106,6 +113,11 @@ public class ImageInfoService {
             final long base64Size = base64Img.length();
             System.out.printf("Base64 size: %.1f KB%n", base64Size / 1024.0);
             
+            if (keepThumbnails) {
+                // Save thumbnail to archive
+                saveThumbnail(imagePath, imageBytes);
+            }
+
             return ImageContent.from(base64Img, "image/jpeg");
         } catch(IOException ex) {
             throw new RuntimeException("Could not parse image: " + imagePath, ex);
@@ -176,5 +188,50 @@ public class ImageInfoService {
         }
         
         return baos.toByteArray();
+    }
+
+    /**
+     * Saves the thumbnail image to the data/thumbnails directory.
+     * Uses a hash of the original image path to generate a unique filename.
+     */
+    private void saveThumbnail(final String imagePath, final byte[] thumbnailBytes) {
+        try {
+            final String thumbnailFilename = generateThumbnailFilename(imagePath);
+            final Path thumbnailPath = Paths.get("data", "thumbnails", thumbnailFilename);
+            
+            Files.write(thumbnailPath, thumbnailBytes);
+            System.out.println("Thumbnail saved: " + thumbnailPath);
+        } catch (IOException e) {
+            // Log error but don't fail the entire operation if thumbnail saving fails
+            System.err.println("Warning: Failed to save thumbnail for " + imagePath + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Generates a unique filename for a thumbnail based on the original image path.
+     * Uses SHA-256 hash of the absolute path to ensure uniqueness.
+     * Returns just the filename (not the full path).
+     */
+    private String generateThumbnailFilename(final String imagePath) {
+        try {
+            final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            final byte[] hash = digest.digest(Paths.get(imagePath).toAbsolutePath().toString().getBytes());
+            
+            // Convert hash to hex string
+            final StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                final String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) {
+                    hexString.append('0');
+                }
+                hexString.append(hex);
+            }
+            
+            return hexString.toString() + ".jpg";
+        } catch (NoSuchAlgorithmException e) {
+            // Fallback to a simpler approach if SHA-256 is not available (should never happen)
+            final String sanitized = imagePath.replaceAll("[^a-zA-Z0-9]", "_");
+            return Math.abs(sanitized.hashCode()) + ".jpg";
+        }
     }
 }

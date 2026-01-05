@@ -68,7 +68,7 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
     private void processImage(final Path imagePath) {
         try {
             System.out.println("\n=== Processing: " + imagePath + " ===");
-            final ImageInfo imageInfo = imageInfoService.generateImageInfo(imagePath.toString());
+            final ImageInfo imageInfo = imageInfoService.generateImageInfo(imagePath.toString(), true);
             System.out.println("Image Info: " + imageInfo);
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());

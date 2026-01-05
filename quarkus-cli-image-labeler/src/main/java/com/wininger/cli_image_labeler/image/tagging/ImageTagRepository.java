@@ -16,7 +16,12 @@ public class ImageTagRepository {
 
     @Transactional
     public ImageTagEntity save(final String fullPath, final String description, final String tags) {
-        final ImageTagEntity entity = new ImageTagEntity(fullPath, description, tags);
+        return save(fullPath, description, tags, null);
+    }
+
+    @Transactional
+    public ImageTagEntity save(final String fullPath, final String description, final String tags, final String thumbnailName) {
+        final ImageTagEntity entity = new ImageTagEntity(fullPath, description, tags, thumbnailName);
         // ID will be generated in @PrePersist callback
         entityManager.persist(entity);
         return entity;
