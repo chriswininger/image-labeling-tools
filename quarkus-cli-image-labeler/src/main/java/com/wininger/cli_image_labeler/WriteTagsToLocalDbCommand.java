@@ -8,6 +8,7 @@ import com.wininger.cli_image_labeler.image.tagging.ImageTagRepository;
 import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 import java.io.IOException;
@@ -22,6 +23,9 @@ import java.util.stream.Stream;
 public class WriteTagsToLocalDbCommand implements Runnable {
     @Parameters(paramLabel = "<directory-path>", description = "The path to a directory containing images to process and save to database")
     String directoryPath;
+
+    @Option(names = "--update-existing", description = "Update existing database entries and regenerate thumbnails")
+    boolean updateExisting;
 
     private final ImageInfoService imageInfoService;
     private final ImageTagRepository imageTagRepository;
@@ -99,11 +103,15 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             // Check if image already exists in database
             final ImageTagEntity existing = imageTagRepository.findByFullPath(fullPath);
             if (existing != null) {
-                System.out.println("Image already exists in database, skipping...");
-                return;
+                if (updateExisting) {
+                    System.out.println("Image already exists in database, updating...");
+                } else {
+                    System.out.println("Image already exists in database, skipping...");
+                    return;
+                }
             }
 
-            // Generate image info
+            // Generate image info (always generate thumbnail when updating existing entries)
             final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(fullPath, true);
 
             if (Objects.isNull(imageInfo.tags())) {
@@ -113,17 +121,29 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             // Convert tags list to string (comma-separated)
             final String tagsString = String.join(", ", imageInfo.tags());
 
-            // Save to database
-            final ImageTagEntity saved = imageTagRepository.save(
-                fullPath,
-                imageInfo.fullDescription(),
-                tagsString,
-                imageInfo.thumbnailName()
-            );
+            if (existing != null) {
+                // Update existing entry
+                existing.setDescription(imageInfo.fullDescription());
+                existing.setTags(tagsString);
+                existing.setThumbnailName(imageInfo.thumbnailName());
+                final ImageTagEntity updated = imageTagRepository.update(existing);
 
-            System.out.println("Saved to database with ID: " + saved.getId());
-            System.out.println("Description: " + imageInfo.fullDescription());
-            System.out.println("Tags: " + tagsString);
+                System.out.println("Updated database entry with ID: " + updated.getId());
+                System.out.println("Description: " + imageInfo.fullDescription());
+                System.out.println("Tags: " + tagsString);
+            } else {
+                // Save new entry to database
+                final ImageTagEntity saved = imageTagRepository.save(
+                    fullPath,
+                    imageInfo.fullDescription(),
+                    tagsString,
+                    imageInfo.thumbnailName()
+                );
+
+                System.out.println("Saved to database with ID: " + saved.getId());
+                System.out.println("Description: " + imageInfo.fullDescription());
+                System.out.println("Tags: " + tagsString);
+            }
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
             e.printStackTrace();

@@ -27,5 +27,5 @@
 
 ## top level
 
-* Add a script that coppies the db and thumbnails from quarkus-cli-image-labeler into searchable-gallery
+* Add a script that coppies the db and thumbnails from quarkus-cli-image-labeler into searchable-gallery X
 * Add a script that runs the image labeling for a specified directory and then runs the copy script
