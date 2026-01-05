@@ -1,8 +1,8 @@
 ## quarkus-cli-image-labeler
 
-* move db file into ./data under quarkus-cli-image-labeler
-* Persist the resized image into ./data/thumbnails
-    * Store the name of the thumbnail in the image-info table
+* move db file into ./data under quarkus-cli-image-labeler X
+* Persist the resized image into ./data/thumbnails X
+    * Store the name of the thumbnail in the image-info table X
 * Capture metadata such as:
     * gps corrdiante,
     * time taken,

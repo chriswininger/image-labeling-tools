@@ -32,9 +32,11 @@ public class ImageTagEntity {
     private String thumbnailName;
     
     @Column(nullable = false, name = "created_at")
+    @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
     
     @Column(nullable = false, name = "updated_at")
+    @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime updatedAt;
 
     // Default constructor for JPA
