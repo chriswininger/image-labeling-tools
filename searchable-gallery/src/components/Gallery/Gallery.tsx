@@ -9,7 +9,7 @@ function Gallery() {
   const dispatch = useAppDispatch();
   const { images, tags, status, tagsStatus, error } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
-  const [joinType, setJoinType] = useState<'and' | 'or'>('or');
+  const [joinType, setJoinType] = useState<'and' | 'or'>('and');
 
   // Load images; fires again if filter options change
   useEffect(() => {

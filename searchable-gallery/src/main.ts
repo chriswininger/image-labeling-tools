@@ -117,8 +117,6 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
     let query = 'SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_tags';
     const params: any[] = [];
 
-    console.log('!!! filterOptions: ', filterOptions);
-
     // Apply tag filtering if tags are provided
     if (filterOptions?.tags && filterOptions.tags.length > 0) {
       const joinType = filterOptions.joinType || 'or';
