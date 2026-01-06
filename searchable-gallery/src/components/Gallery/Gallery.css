@@ -7,10 +7,17 @@
     flex-wrap: wrap;
 }
 
-.gallery-search-controls .multi-select-wrapper {
+.gallery-search-controls-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     flex: 1;
     min-width: 300px;
     max-width: 500px;
+}
+
+.gallery-search-controls-group .multi-select-wrapper {
+    flex: 1;
 }
 
 /* Button wrapper matches MultiSelect label structure for alignment */
@@ -66,4 +73,44 @@
 
 .gallery-clear-button:hover {
     background-color: #5a6268;
+}
+
+.gallery-join-type {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.gallery-join-type-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0;
+}
+
+.gallery-radio-group {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.gallery-radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: #333;
+    user-select: none;
+}
+
+.gallery-radio-input {
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+}
+
+.gallery-radio-label:hover {
+    color: #007bff;
 }

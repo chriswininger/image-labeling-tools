@@ -108,7 +108,7 @@ const registerImageProtocol = () => {
 };
 
 // IPC handlers for database operations
-ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[] }) => {
+ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]; joinType?: 'and' | 'or' }) => {
   if (!db) {
     throw new Error('Database not initialized');
   }
@@ -121,6 +121,7 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
 
     // Apply tag filtering if tags are provided
     if (filterOptions?.tags && filterOptions.tags.length > 0) {
+      const joinType = filterOptions.joinType || 'or';
       // Use SQL to match tags in comma-separated string
       // Match whole tags by checking for comma boundaries (handles spaces around commas)
       const tagConditions = filterOptions.tags.map((tag) => {
@@ -136,7 +137,9 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
         );
         return `(tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags = ?)`;
       });
-      query += ` WHERE ${tagConditions.join(' OR ')}`;
+      // Join conditions with AND or OR based on joinType
+      const joinOperator = joinType === 'and' ? ' AND ' : ' OR ';
+      query += ` WHERE ${tagConditions.join(joinOperator)}`;
     }
 
     query += ' ORDER BY created_at DESC';

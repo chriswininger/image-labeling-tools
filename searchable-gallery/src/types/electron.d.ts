@@ -7,6 +7,7 @@ export interface TagData {
 
 export interface ImageFilterOptions {
   tags?: string[];
+  joinType?: 'and' | 'or';
 }
 
 export interface ElectronAPI {

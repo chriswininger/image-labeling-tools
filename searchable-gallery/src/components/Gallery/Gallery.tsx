@@ -9,15 +9,16 @@ function Gallery() {
   const dispatch = useAppDispatch();
   const { images, tags, status, tagsStatus, error } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [joinType, setJoinType] = useState<'and' | 'or'>('or');
 
   // Load images; fires again if filter options change
   useEffect(() => {
     const filterOptions = selectedValues.length > 0
-      ? { tags: selectedValues }
+      ? { tags: selectedValues, joinType }
       : undefined;
     dispatch(fetchAllImages(filterOptions));
 
-  }, [dispatch, selectedValues]);
+  }, [dispatch, selectedValues, joinType]);
 
   // Load Tags -- if not already loading
   useEffect(() => {
@@ -45,13 +46,43 @@ function Gallery() {
   return (
     <div className="gallery">
       <div className="gallery-search-controls">
-        <MultiSelect
-          label="Search by tags:"
-          options={options}
-          selectedValues={selectedValues}
-          onChange={onTagsChanged}
-          placeholder="tags"
-        />
+        <div className="gallery-search-controls-group">
+          <MultiSelect
+            label="Search by tags:"
+            options={options}
+            selectedValues={selectedValues}
+            onChange={onTagsChanged}
+            placeholder="tags"
+          />
+
+          <div className="gallery-join-type">
+            <div className="gallery-radio-group">
+              <label className="gallery-join-type-label">Join With:</label>
+              <label className="gallery-radio-label">
+                <input
+                  type="radio"
+                  name="joinType"
+                  value="or"
+                  checked={joinType === 'or'}
+                  onChange={(e) => setJoinType(e.target.value as 'and' | 'or')}
+                  className="gallery-radio-input"
+                />
+                <span>Or</span>
+              </label>
+              <label className="gallery-radio-label">
+                <input
+                  type="radio"
+                  name="joinType"
+                  value="and"
+                  checked={joinType === 'and'}
+                  onChange={(e) => setJoinType(e.target.value as 'and' | 'or')}
+                  className="gallery-radio-input"
+                />
+                <span>And</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
 
       {images.length === 0 ? (
@@ -59,9 +90,9 @@ function Gallery() {
       ) : (
         <div className="gallery-grid">
           {images.map((image) => (
-            <ImageThumbnail 
-              key={image.id} 
-              image={image} 
+            <ImageThumbnail
+              key={image.id}
+              image={image}
               onTagClick={handleTagClick}
             />
           ))}
