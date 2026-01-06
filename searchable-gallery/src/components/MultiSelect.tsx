@@ -43,48 +43,17 @@ function MultiSelect({
 
   // Filter options based on search query
   const filteredOptions = options.filter((option) =>
-    option.label.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    option.label.toLowerCase().includes(searchQuery.toLowerCase()));
 
   // Get selected options
-  const selectedOptions = options.filter((option) =>
-    selectedValues.includes(option.value)
-  );
+  const selectedOptions = options.filter((option) => selectedValues.includes(option.value));
 
-  const handleToggleOption = (value: string) => {
-    if (selectedValues.includes(value)) {
-      onChange(selectedValues.filter((v) => v !== value));
-    } else {
-      onChange([...selectedValues, value]);
-    }
-  };
-
-  const handleRemoveTag = (value: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    onChange(selectedValues.filter((v) => v !== value));
-  };
-
-  const handleClearAll = (event: React.MouseEvent) => {
-    event.stopPropagation();
-    onChange([]);
-  };
-
-  const handleSelectAll = () => {
-    const allValues = filteredOptions.map((option) => option.value);
-    const newSelectedValues = [...new Set([...selectedValues, ...allValues])];
-    onChange(newSelectedValues);
-  };
-
-  const handleDeselectAll = () => {
-    const filteredValues = filteredOptions.map((option) => option.value);
-    onChange(selectedValues.filter((value) => !filteredValues.includes(value)));
-  };
-
-  const allFilteredSelected = filteredOptions.length > 0 &&
-    filteredOptions.every((option) => selectedValues.includes(option.value));
+  const allFilteredSelected = filteredOptions.length > 0
+    && filteredOptions.every((option) => selectedValues.includes(option.value));
+  
   const someFilteredSelected = filteredOptions.some((option) =>
-    selectedValues.includes(option.value)
-  );
+    selectedValues.includes(option.value));
+
 
   return (
     <div className={`multi-select-wrapper ${className}`} ref={wrapperRef}>
@@ -123,6 +92,35 @@ function MultiSelect({
       />
     </div>
   );
+
+  function handleToggleOption(value: string) {
+    if (selectedValues.includes(value)) {
+      onChange(selectedValues.filter((v) => v !== value));
+    } else {
+      onChange([...selectedValues, value]);
+    }
+  }
+
+  function handleRemoveTag(value: string, event: React.MouseEvent) {
+    event.stopPropagation();
+    onChange(selectedValues.filter((v) => v !== value));
+  }
+
+  function handleClearAll(event: React.MouseEvent) {
+    event.stopPropagation();
+    onChange([]);
+  }
+
+  function handleSelectAll() {
+    const allValues = filteredOptions.map((option) => option.value);
+    const newSelectedValues = [...new Set([...selectedValues, ...allValues])];
+    onChange(newSelectedValues);
+  }
+
+  function handleDeselectAll() {
+    const filteredValues = filteredOptions.map((option) => option.value);
+    onChange(selectedValues.filter((value) => !filteredValues.includes(value)));
+  };
 }
 
 function SelectedOptions(
