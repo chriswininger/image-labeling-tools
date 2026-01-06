@@ -9,28 +9,17 @@ function Gallery() {
   const dispatch = useAppDispatch();
   const { images, tags, status, tagsStatus, error } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
-  const [searchTags, setSearchTags] = useState<string[]>([]);
 
-  // Initial fetch on mount (all images)
+  // Load images; fires again if filter options change
   useEffect(() => {
-    if (status === 'idle') {
-      dispatch(fetchAllImages(undefined));
-    }
-  }, [status, dispatch]);
+    const filterOptions = selectedValues.length > 0
+      ? { tags: selectedValues }
+      : undefined;
+    dispatch(fetchAllImages(filterOptions));
 
-  // Track if search has been used (to distinguish between initial empty state and cleared search)
-  const [hasSearched, setHasSearched] = useState(false);
+  }, [dispatch, selectedValues]);
 
-  // Fetch images when search tags change (triggered by Search button)
-  useEffect(() => {
-    if (hasSearched) {
-      const filterOptions = searchTags.length > 0
-        ? { tags: searchTags }
-        : undefined;
-      dispatch(fetchAllImages(filterOptions));
-    }
-  }, [dispatch, searchTags, hasSearched]);
-
+  // Load Tags -- if not already loading
   useEffect(() => {
     if (tagsStatus === 'idle') {
       dispatch(fetchAllTags());
@@ -60,17 +49,9 @@ function Gallery() {
           label="Search by tags:"
           options={options}
           selectedValues={selectedValues}
-          onChange={setSelectedValues}
+          onChange={onTagsChanged}
           placeholder="tags"
         />
-        <div className="gallery-search-button-wrapper">
-          <button
-            className="gallery-search-button"
-            onClick={handleSearch}
-          >
-            Search
-          </button>
-        </div>
       </div>
 
       {images.length === 0 ? (
@@ -85,9 +66,8 @@ function Gallery() {
     </div>
   );
 
-  function handleSearch(){
-    setSearchTags([...selectedValues]);
-    setHasSearched(true);
+  function onTagsChanged(val: string[]) {
+    setSelectedValues([...val]);
   }
 }
 
