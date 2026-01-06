@@ -6,7 +6,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 // Expose protected methods that allow the renderer process to use
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('electronAPI', {
-  getAllImages: () => ipcRenderer.invoke('get-all-images'),
+  getAllImages: (filterOptions?: { tags?: string[] }) => ipcRenderer.invoke('get-all-images', filterOptions),
+  getAllTags: () => ipcRenderer.invoke('get-all-tags'),
   getImageData: (imagePath: string) => ipcRenderer.invoke('get-image-data', imagePath),
   getThumbnailPath: (thumbnailName: string) => ipcRenderer.invoke('get-thumbnail-path', thumbnailName),
 });

@@ -59,7 +59,7 @@ const initDatabase = () => {
     try {
       const normalizedPath = path.normalize(dbPath);
       console.log(`Trying database path: ${normalizedPath}`);
-      
+
       if (fs.existsSync(normalizedPath)) {
         console.log(`Database file exists at: ${normalizedPath}`);
         const DB = loadDatabase();
@@ -85,12 +85,12 @@ const registerImageProtocol = () => {
       const url = request.url.replace('app://', '');
       // Remove query parameters if any
       const filePath = url.split('?')[0];
-      
+
       // Decode the path and verify it exists
       const decodedPath = decodeURIComponent(filePath);
       console.log('Protocol request:', request.url);
       console.log('Decoded path:', decodedPath);
-      
+
       if (fs.existsSync(decodedPath)) {
         console.log('✅ Serving image from:', decodedPath);
         callback({ path: decodedPath });
@@ -108,17 +108,61 @@ const registerImageProtocol = () => {
 };
 
 // IPC handlers for database operations
-ipcMain.handle('get-all-images', async () => {
+ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[] }) => {
   if (!db) {
     throw new Error('Database not initialized');
   }
-  
+
   try {
-    const stmt = db.prepare('SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_tags ORDER BY created_at DESC');
-    const images = stmt.all();
+    let query = 'SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_tags';
+    const params: any[] = [];
+
+    console.log('!!! filterOptions: ', filterOptions);
+
+    // Apply tag filtering if tags are provided
+    if (filterOptions?.tags && filterOptions.tags.length > 0) {
+      // Use SQL to match tags in comma-separated string
+      // Match whole tags by checking for comma boundaries (handles spaces around commas)
+      const tagConditions = filterOptions.tags.map((tag) => {
+        const trimmedTag = tag.trim();
+        // Match patterns: tag at start, middle, or end of comma-separated list, or exact match
+        params.push(
+          `${trimmedTag},%`,      // Start: "tag, ..."
+          `%, ${trimmedTag},%`,  // Middle with space: "..., tag, ..."
+          `%,${trimmedTag},%`,   // Middle without space: "...,tag,..."
+          `%, ${trimmedTag}`,    // End with space: "..., tag"
+          `%,${trimmedTag}`,     // End without space: "...,tag"
+          trimmedTag              // Exact: "tag"
+        );
+        return `(tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags = ?)`;
+      });
+      query += ` WHERE ${tagConditions.join(' OR ')}`;
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    console.log('run query: ', query);
+    const stmt = db.prepare(query);
+    const images = stmt.all(...params);
     return images;
   } catch (error) {
     console.error('Error fetching images:', error);
+    throw error;
+  }
+});
+
+// IPC handler to get all tags
+ipcMain.handle('get-all-tags', async () => {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+
+  try {
+    const stmt = db.prepare('SELECT id, tag_name, created_at, updated_at FROM tags ORDER BY tag_name ASC');
+    const tags = stmt.all();
+    return tags;
+  } catch (error) {
+    console.error('Error fetching tags:', error);
     throw error;
   }
 });
@@ -152,11 +196,11 @@ ipcMain.handle('get-image-data', async (event, imagePath: string) => {
     if (!fs.existsSync(imagePath)) {
       throw new Error(`Image file not found: ${imagePath}`);
     }
-    
+
     // Read the image file and convert to base64
     const imageBuffer = fs.readFileSync(imagePath);
     const base64 = imageBuffer.toString('base64');
-    
+
     // Determine MIME type from file extension
     const ext = path.extname(imagePath).toLowerCase();
     let mimeType = 'image/jpeg'; // default
@@ -164,7 +208,7 @@ ipcMain.handle('get-image-data', async (event, imagePath: string) => {
     else if (ext === '.gif') mimeType = 'image/gif';
     else if (ext === '.webp') mimeType = 'image/webp';
     else if (ext === '.bmp') mimeType = 'image/bmp';
-    
+
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
     console.error('Error reading image:', error);

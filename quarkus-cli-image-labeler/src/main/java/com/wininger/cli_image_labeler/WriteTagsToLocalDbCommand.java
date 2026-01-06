@@ -4,6 +4,7 @@ import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.ImageInfoService;
 import com.wininger.cli_image_labeler.image.tagging.ImageTagEntity;
 import com.wininger.cli_image_labeler.image.tagging.ImageTagRepository;
+import com.wininger.cli_image_labeler.image.tagging.TagRepository;
 
 import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
@@ -29,6 +30,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
     private final ImageInfoService imageInfoService;
     private final ImageTagRepository imageTagRepository;
+    private final TagRepository tagRepository;
 
     private static final Set<String> IMAGE_EXTENSIONS = Set.of(
         "jpg", "jpeg", "png", "gif", "bmp", "webp", "tiff", "tif"
@@ -37,10 +39,12 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     @Inject
     public WriteTagsToLocalDbCommand(
         final ImageInfoService imageInfoService,
-        final ImageTagRepository imageTagRepository
+        final ImageTagRepository imageTagRepository,
+        final TagRepository tagRepository
     ) {
         this.imageInfoService = imageInfoService;
         this.imageTagRepository = imageTagRepository;
+        this.tagRepository = tagRepository;
     }
 
     @Override
@@ -120,6 +124,12 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
             // Convert tags list to string (comma-separated)
             final String tagsString = String.join(", ", imageInfo.tags());
+
+            // Upsert all tags into the tags table
+            for (String tag : imageInfo.tags()) {
+                System.out.print("!!! inserting tag: " + tag);
+                tagRepository.upsertTag(tag);
+            }
 
             if (existing != null) {
                 // Update existing entry

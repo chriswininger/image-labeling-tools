@@ -1,29 +1,49 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchAllImages } from '../store/gallerySlice';
+import { fetchAllImages, fetchAllTags } from '../store/gallerySlice';
 import ImageThumbnail from './ImageThumbnail';
 import MultiSelect, { MultiSelectOption } from './MultiSelect';
+import './Gallery.css'
 
 function Gallery() {
   const dispatch = useAppDispatch();
-  const { images, status, error } = useAppSelector((state) => state.gallery);
+  const { images, tags, status, tagsStatus, error, tagsError } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
+  const [searchTags, setSearchTags] = useState<string[]>([]);
 
+  // Initial fetch on mount (all images)
   useEffect(() => {
     if (status === 'idle') {
-      dispatch(fetchAllImages());
+      dispatch(fetchAllImages(undefined));
     }
   }, [status, dispatch]);
 
-  const options: MultiSelectOption[] = [
-    { value: 'angular', label: 'Angular' },
-    { value: 'bootstrap', label: 'Bootstrap' },
-    { value: 'react', label: 'React.js' },
-    { value: 'vue', label: 'Vue.js' },
-    { value: 'django', label: 'Django' },
-    { value: 'laravel', label: 'Laravel' },
-    { value: 'nodejs', label: 'Node.js' },
-  ];
+  // Track if search has been used (to distinguish between initial empty state and cleared search)
+  const [hasSearched, setHasSearched] = useState(false);
+
+  // Fetch images when search tags change (triggered by Search button)
+  useEffect(() => {
+    if (hasSearched) {
+      const filterOptions = searchTags.length > 0 
+        ? { tags: searchTags } 
+        : undefined;
+      dispatch(fetchAllImages(filterOptions));
+    }
+  }, [dispatch, searchTags, hasSearched]);
+
+  useEffect(() => {
+    if (tagsStatus === 'idle') {
+      dispatch(fetchAllTags());
+    }
+  }, [tagsStatus, dispatch]);
+
+  // Convert tags to MultiSelectOption format (both value and label are tag_name)
+  const options: MultiSelectOption[] = useMemo(() => {
+    return tags.map((tag) => ({
+      value: tag.tag_name,
+      label: tag.tag_name,
+    }));
+  }, [tags]);
 
   if (status === 'loading') {
     return <div className="gallery-loading">Loading images...</div>;
@@ -33,19 +53,28 @@ function Gallery() {
     return <div className="gallery-error">Error: {error}</div>;
   }
 
+  const handleSearch = () => {
+    setSearchTags([...selectedValues]);
+    setHasSearched(true);
+  };
+
   return (
     <div className="gallery">
-      <div style={{ padding: '2rem', maxWidth: '500px', marginBottom: '2rem' }}>
-        <h2>MultiSelect Example</h2>
+      <div className="gallery-search-controls">
         <MultiSelect
-          label="Framework"
+          label="Search by tags:"
           options={options}
           selectedValues={selectedValues}
           onChange={setSelectedValues}
-          placeholder="Please select your framework."
+          placeholder="tags"
         />
-        <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: '#666' }}>
-          Selected: {selectedValues.length > 0 ? selectedValues.join(', ') : 'None'}
+        <div className="gallery-search-button-wrapper">
+          <button 
+            className="gallery-search-button" 
+            onClick={handleSearch}
+          >
+            Search
+          </button>
         </div>
       </div>
 

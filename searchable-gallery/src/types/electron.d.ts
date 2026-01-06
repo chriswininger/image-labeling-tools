@@ -1,5 +1,17 @@
+export interface TagData {
+  id: number;
+  tag_name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ImageFilterOptions {
+  tags?: string[];
+}
+
 export interface ElectronAPI {
-  getAllImages: () => Promise<ImageData[]>;
+  getAllImages: (filterOptions?: ImageFilterOptions) => Promise<ImageData[]>;
+  getAllTags: () => Promise<TagData[]>;
   getImageData: (imagePath: string) => Promise<string>;
   getThumbnailPath: (thumbnailName: string) => Promise<string>;
 }

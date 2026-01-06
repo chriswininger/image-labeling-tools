@@ -23,8 +23,8 @@
     * search by tags
     * constrain by date taken ranges
     * search within scription
-* Create some kind of re-usable multi-select tool similar to https://coreui.io/react/docs/forms/multi-select/
-
+* Create some kind of re-usable multi-select tool similar to htts://coreui.io/react/docs/forms/multi-select/
+p
 ## top level
 
 * Add a script that coppies the db and thumbnails from quarkus-cli-image-labeler into searchable-gallery X
