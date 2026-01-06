@@ -50,6 +50,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     @Override
     @ActivateRequestContext
     public void run() {
+        final long startTime = System.currentTimeMillis();
         final Path directory = Paths.get(directoryPath);
 
         if (!Files.exists(directory)) {
@@ -86,7 +87,14 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             throw new RuntimeException("Failed to process directory", e);
         }
 
-        System.out.println("\nCompleted processing all images!");
+        final long totalTimeMs = System.currentTimeMillis() - startTime;
+        final double totalTimeSeconds = totalTimeMs / 1000.0D;
+        final long totalTimeMinutes = (long) Math.floor(totalTimeSeconds / 60.0D);
+        final long remainingSeconds = (long) (totalTimeSeconds % 60.0D);
+
+      System.out.printf("\n\nCompleted processing all images: %s minutes and %s seconds%n",
+          totalTimeMinutes, remainingSeconds);
+
     }
 
     private boolean isImageFile(final Path path) {
@@ -100,6 +108,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     }
 
     private void processImage(final Path imagePath) {
+        final long startTime = System.currentTimeMillis();
+
         try {
             final String fullPath = imagePath.toAbsolutePath().toString();
             System.out.println("\n=== Processing: " + fullPath + " ===");
@@ -127,7 +137,6 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
             // Upsert all tags into the tags table
             for (String tag : imageInfo.tags()) {
-                System.out.print("!!! inserting tag: " + tag);
                 tagRepository.upsertTag(tag);
             }
 
@@ -141,6 +150,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 System.out.println("Updated database entry with ID: " + updated.getId());
                 System.out.println("Description: " + imageInfo.fullDescription());
                 System.out.println("Tags: " + tagsString);
+                System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
+                System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
             } else {
                 // Save new entry to database
                 final ImageTagEntity saved = imageTagRepository.save(
@@ -153,6 +164,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 System.out.println("Saved to database with ID: " + saved.getId());
                 System.out.println("Description: " + imageInfo.fullDescription());
                 System.out.println("Tags: " + tagsString);
+                System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
+                System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
             }
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
