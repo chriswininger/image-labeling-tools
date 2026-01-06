@@ -215,6 +215,13 @@ function DropDownMenu(
             <label
               key={option.value}
               className={`multi-select-option ${isSelected ? 'multi-select-option-selected' : ''}`}
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleToggleOption(option.value);
+                }
+              }}
             >
               <input
                 type="checkbox"
