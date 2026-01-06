@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
 import { Provider } from 'react-redux';
 import { store } from '../store/store';
-import Gallery from './Gallery';
+import Gallery from './Gallery/Gallery';
 
 function App() {
   return (

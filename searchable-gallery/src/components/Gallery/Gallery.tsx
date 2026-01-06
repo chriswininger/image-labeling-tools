@@ -1,13 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
-import { fetchAllImages, fetchAllTags } from '../store/gallerySlice';
-import ImageThumbnail from './ImageThumbnail';
-import MultiSelect, { MultiSelectOption } from './MultiSelect';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import { fetchAllImages, fetchAllTags } from '../../store/gallerySlice';
+import ImageThumbnail from '../ImageThumbnail';
+import MultiSelect, { MultiSelectOption } from '../MultiSelect/MultiSelect';
 import './Gallery.css'
 
 function Gallery() {
   const dispatch = useAppDispatch();
-  const { images, tags, status, tagsStatus, error, tagsError } = useAppSelector((state) => state.gallery);
+  const { images, tags, status, tagsStatus, error } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [searchTags, setSearchTags] = useState<string[]>([]);
 
@@ -24,8 +24,8 @@ function Gallery() {
   // Fetch images when search tags change (triggered by Search button)
   useEffect(() => {
     if (hasSearched) {
-      const filterOptions = searchTags.length > 0 
-        ? { tags: searchTags } 
+      const filterOptions = searchTags.length > 0
+        ? { tags: searchTags }
         : undefined;
       dispatch(fetchAllImages(filterOptions));
     }
@@ -69,8 +69,8 @@ function Gallery() {
           placeholder="tags"
         />
         <div className="gallery-search-button-wrapper">
-          <button 
-            className="gallery-search-button" 
+          <button
+            className="gallery-search-button"
             onClick={handleSearch}
           >
             Search
