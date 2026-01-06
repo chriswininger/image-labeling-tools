@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { ImageData } from '../types/electron';
+import type { ImageData } from '../../types/electron';
+import "./ImageThumbnail.css"
 
 interface ImageThumbnailProps {
   image: ImageData;
@@ -10,13 +11,9 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load thumbnail first, fall back to full image if thumbnail doesn't exist
+    // Load the thumbnail first, fall back to full image if thumbnail doesn't exist
     const loadImage = async () => {
       try {
-        if (!window.electronAPI) {
-          throw new Error('Electron API not available');
-        }
-        
         // Try to load thumbnail first if available
         if (image.thumb_nail_name) {
           try {
@@ -31,7 +28,7 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
             // Fall through to load full image
           }
         }
-        
+
         // Fall back to full image
         const dataUrl = await window.electronAPI.getImageData(image.full_path);
         setThumbnailUrl(dataUrl);
@@ -43,28 +40,6 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
 
     loadImage();
   }, [image.full_path, image.thumb_nail_name]);
-
-  // Parse tags from comma-separated string
-  const parseTags = (tagsString: string): string[] => {
-    if (!tagsString || tagsString.trim() === '') {
-      return [];
-    }
-    return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
-  };
-
-  // Generate a color for a tag based on its hash
-  const getTagColor = (tag: string): string => {
-    // Generate a hash from the tag string
-    let hash = 0;
-    for (let i = 0; i < tag.length; i++) {
-      hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    
-    // Generate a color with good contrast (using HSL)
-    const hue = Math.abs(hash) % 360;
-    // Use a medium saturation and lightness for good readability
-    return `hsl(${hue}, 65%, 50%)`;
-  };
 
   const tags = parseTags(image.tags || '');
 
@@ -93,7 +68,7 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
               <span
                 key={index}
                 className="tag-pill"
-                style={{ backgroundColor: getTagColor(tag) }}
+                style={{backgroundColor: getTagColor(tag)}}
                 title={tag}
               >
                 {tag}
@@ -104,6 +79,28 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
       )}
     </div>
   );
+
+  // Parse tags from comma-separated string
+  function parseTags(tagsString: string): string[] {
+    if (!tagsString || tagsString.trim() === '') {
+      return [];
+    }
+    return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+  }
+
+  // Generate a color for a tag based on its hash
+  function getTagColor(tag: string): string {
+    // Generate a hash from the tag string
+    let hash = 0;
+    for (let i = 0; i < tag.length; i++) {
+      hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    // Generate a color with good contrast (using HSL)
+    const hue = Math.abs(hash) % 360;
+    // Use a medium saturation and lightness for good readability
+    return `hsl(${hue}, 65%, 50%)`;
+  }
 }
 
 export default ImageThumbnail;

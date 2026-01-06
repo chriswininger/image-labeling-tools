@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchAllImages, fetchAllTags } from '../../store/gallerySlice';
-import ImageThumbnail from '../ImageThumbnail';
+import ImageThumbnail from '../ImageThumbnail/ImageThumbnail';
 import MultiSelect, { MultiSelectOption } from '../MultiSelect/MultiSelect';
 import './Gallery.css'
 
@@ -53,11 +53,6 @@ function Gallery() {
     return <div className="gallery-error">Error: {error}</div>;
   }
 
-  const handleSearch = () => {
-    setSearchTags([...selectedValues]);
-    setHasSearched(true);
-  };
-
   return (
     <div className="gallery">
       <div className="gallery-search-controls">
@@ -89,6 +84,11 @@ function Gallery() {
       )}
     </div>
   );
+
+  function handleSearch(){
+    setSearchTags([...selectedValues]);
+    setHasSearched(true);
+  }
 }
 
 export default Gallery;
