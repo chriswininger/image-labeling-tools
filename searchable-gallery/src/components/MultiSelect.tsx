@@ -98,6 +98,8 @@ function MultiSelect({
       onChange(selectedValues.filter((v) => v !== value));
     } else {
       onChange([...selectedValues, value]);
+      // Clear search input when selecting an item
+      setSearchQuery('');
     }
   }
 
@@ -230,4 +232,3 @@ function DropDownMenu(
 }
 
 export default MultiSelect;
-
