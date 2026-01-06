@@ -59,7 +59,11 @@ function Gallery() {
       ) : (
         <div className="gallery-grid">
           {images.map((image) => (
-            <ImageThumbnail key={image.id} image={image} />
+            <ImageThumbnail 
+              key={image.id} 
+              image={image} 
+              onTagClick={handleTagClick}
+            />
           ))}
         </div>
       )}
@@ -68,6 +72,13 @@ function Gallery() {
 
   function onTagsChanged(val: string[]) {
     setSelectedValues([...val]);
+  }
+
+  function handleTagClick(tag: string) {
+    // Add tag to selected tags if it's not already selected
+    if (!selectedValues.includes(tag)) {
+      setSelectedValues([...selectedValues, tag]);
+    }
   }
 }
 

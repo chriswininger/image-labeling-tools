@@ -4,9 +4,10 @@ import "./ImageThumbnail.css"
 
 interface ImageThumbnailProps {
   image: ImageData;
+  onTagClick?: (tag: string) => void;
 }
 
-function ImageThumbnail({ image }: ImageThumbnailProps) {
+function ImageThumbnail({ image, onTagClick }: ImageThumbnailProps) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,6 +71,10 @@ function ImageThumbnail({ image }: ImageThumbnailProps) {
                 className="tag-pill"
                 style={{backgroundColor: getTagColor(tag)}}
                 title={tag}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTagClick?.(tag);
+                }}
               >
                 {tag}
               </span>
