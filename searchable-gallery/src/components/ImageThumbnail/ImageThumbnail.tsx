@@ -86,11 +86,15 @@ function ImageThumbnail({ image, onTagClick }: ImageThumbnailProps) {
   );
 
   // Parse tags from comma-separated string
+  // TODO -- We really shouldn't be returning this from the backend as comma separate strings now that it's stored
+  // correctly in the DB
   function parseTags(tagsString: string): string[] {
     if (!tagsString || tagsString.trim() === '') {
       return [];
     }
-    return tagsString.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+    return tagsString.split(',')
+      .map(tag => tag.trim())
+      .sort();
   }
 
   // Generate a color for a tag based on its hash

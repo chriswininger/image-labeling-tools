@@ -11,6 +11,7 @@ import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import javax.imageio.IIOImage;
@@ -66,13 +67,16 @@ public class ImageInfoService
     final ImageContent imageContent = getImageContent(imagePath, keepThumbnails);
     final ImageInfo imageInfo = generateImageInfo(imageContent, imagePath);
 
-    // Generate thumbnail filename and add it to ImageInfo (the thumbnail its self has already been saved at this point
+    // Generate a thumbnail filename and add it to ImageInfo (the thumbnail its self has already been saved at this point
     // assuming keepThumbnails was set to true, this just determines if we store it in the db
     final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
 
-    // Deduplicate tags (preserve order using LinkedHashSet)
+    // Deduplicate tags, convert to lowercase, sort alphabetically
     final List<String> deduplicatedTags = imageInfo.tags() != null
-        ? new LinkedHashSet<>(imageInfo.tags()).stream().toList()
+        ? new HashSet<>(
+            // conver to lowercase before de-duplicating
+            imageInfo.tags().stream().map(String::toLowerCase).toList()
+        ).stream().sorted().toList()
         : null;
 
     return new ImageInfo(deduplicatedTags, imageInfo.fullDescription(), thumbnailName);
