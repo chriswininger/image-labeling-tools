@@ -160,8 +160,8 @@ ipcMain.handle('get-all-tags', async () => {
 
   try {
     const stmt = db.prepare('SELECT id, tag_name, created_at, updated_at FROM tags ORDER BY tag_name ASC');
-    const tags = stmt.all();
-    return tags;
+
+    return stmt.all();
   } catch (error) {
     console.error('Error fetching tags:', error);
     throw error;
