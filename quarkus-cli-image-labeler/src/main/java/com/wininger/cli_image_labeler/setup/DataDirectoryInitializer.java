@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler;
+package com.wininger.cli_image_labeler.setup;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,7 +21,7 @@ public class DataDirectoryInitializer {
                 throw new RuntimeException("Failed to create data directory", e);
             }
         }
-        
+
         final Path thumbnailsDir = Paths.get("data", "thumbnails");
         if (!Files.exists(thumbnailsDir)) {
             try {

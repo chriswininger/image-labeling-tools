@@ -1,12 +1,16 @@
 package com.wininger.cli_image_labeler;
 
+import com.wininger.cli_image_labeler.commands.GenerateImageTagsCommand;
+import com.wininger.cli_image_labeler.commands.GenerateImageTagsForDirectoryCommand;
+import com.wininger.cli_image_labeler.commands.WriteTagsToLocalDbCommand;
+import com.wininger.cli_image_labeler.setup.DataDirectoryInitializer;
 import io.quarkus.picocli.runtime.annotations.TopCommand;
 import picocli.CommandLine.Command;
 
 @TopCommand
-@Command(name = "app", mixinStandardHelpOptions = true, 
-         subcommands = { 
-             GenerateImageTagsCommand.class, 
+@Command(name = "app", mixinStandardHelpOptions = true,
+         subcommands = {
+             GenerateImageTagsCommand.class,
              GenerateImageTagsForDirectoryCommand.class,
              WriteTagsToLocalDbCommand.class
          })

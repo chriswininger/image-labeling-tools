@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.dto;
 
 import java.util.List;
 

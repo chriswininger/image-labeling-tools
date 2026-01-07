@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.db;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;
@@ -18,7 +18,7 @@ public class TagRepository {
     public TagEntity upsertTag(final String tagName) {
         // Try to find existing tag
         TagEntity existing = findByTagName(tagName);
-        
+
         if (existing != null) {
             // Update the updated_at timestamp
             existing.setUpdatedAt(LocalDateTime.now());
@@ -34,7 +34,7 @@ public class TagRepository {
     @Transactional
     public TagEntity findByTagName(final String tagName) {
         return entityManager.createQuery(
-            "SELECT t FROM TagEntity t WHERE t.tagName = :tagName", 
+            "SELECT t FROM TagEntity t WHERE t.tagName = :tagName",
             TagEntity.class
         )
         .setParameter("tagName", tagName)
@@ -46,7 +46,7 @@ public class TagRepository {
     @Transactional
     public List<TagEntity> findAll() {
         return entityManager.createQuery(
-            "SELECT t FROM TagEntity t ORDER BY t.tagName", 
+            "SELECT t FROM TagEntity t ORDER BY t.tagName",
             TagEntity.class
         )
         .getResultList();

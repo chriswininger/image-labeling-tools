@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.services;
 
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
@@ -21,6 +21,7 @@ import javax.imageio.stream.ImageOutputStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;

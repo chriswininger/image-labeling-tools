@@ -1,7 +1,7 @@
-package com.wininger.cli_image_labeler;
+package com.wininger.cli_image_labeler.commands;
 
-import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
-import com.wininger.cli_image_labeler.image.tagging.ImageInfoService;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
+import com.wininger.cli_image_labeler.image.tagging.services.ImageInfoService;
 
 import jakarta.inject.Inject;
 import picocli.CommandLine.Command;

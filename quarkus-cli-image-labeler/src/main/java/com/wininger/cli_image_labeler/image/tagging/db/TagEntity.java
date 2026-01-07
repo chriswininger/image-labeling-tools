@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.db;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -14,18 +14,18 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "tags")
 public class TagEntity {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    
+
     @Column(nullable = false, unique = true, name = "tag_name")
     private String tagName;
-    
+
     @Column(nullable = false, name = "created_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
-    
+
     @Column(nullable = false, name = "updated_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime updatedAt;

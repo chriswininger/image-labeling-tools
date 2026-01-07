@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.db;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.persistence.EntityManager;

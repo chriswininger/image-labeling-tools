@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging;
+package com.wininger.cli_image_labeler.image.tagging.db;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

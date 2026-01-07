@@ -1,10 +1,10 @@
-package com.wininger.cli_image_labeler;
+package com.wininger.cli_image_labeler.commands;
 
-import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
-import com.wininger.cli_image_labeler.image.tagging.ImageInfoService;
-import com.wininger.cli_image_labeler.image.tagging.ImageInfoEntity;
-import com.wininger.cli_image_labeler.image.tagging.ImageInfoRepository;
-import com.wininger.cli_image_labeler.image.tagging.TagRepository;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
+import com.wininger.cli_image_labeler.image.tagging.services.ImageInfoService;
+import com.wininger.cli_image_labeler.image.tagging.db.ImageInfoEntity;
+import com.wininger.cli_image_labeler.image.tagging.db.ImageInfoRepository;
+import com.wininger.cli_image_labeler.image.tagging.db.TagRepository;
 
 import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
