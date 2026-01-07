@@ -4,10 +4,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -25,8 +30,13 @@ public class ImageInfoEntity {
     @Column(nullable = false, length = 10000)
     private String description;
 
-    @Column(nullable = false, length = 5000)
-    private String tags; // Stored as comma-separated string or JSON
+    @ManyToMany
+    @JoinTable(
+        name = "image_info_tag_join",
+        joinColumns = @JoinColumn(name = "image_info_id"),
+        inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private List<TagEntity> tags = new ArrayList<>();
 
     @Column(name = "thumb_nail_name")
     private String thumbnailName;
@@ -43,14 +53,14 @@ public class ImageInfoEntity {
     public ImageInfoEntity() {
     }
 
-    public ImageInfoEntity(String fullPath, String description, String tags) {
+    public ImageInfoEntity(String fullPath, String description, List<TagEntity> tags) {
         this(fullPath, description, tags, null);
     }
 
-    public ImageInfoEntity(String fullPath, String description, String tags, String thumbnailName) {
+    public ImageInfoEntity(String fullPath, String description, List<TagEntity> tags, String thumbnailName) {
         this.fullPath = fullPath;
         this.description = description;
-        this.tags = tags;
+        this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
         this.thumbnailName = thumbnailName;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -94,12 +104,12 @@ public class ImageInfoEntity {
         this.description = description;
     }
 
-    public String getTags() {
+    public List<TagEntity> getTags() {
         return tags;
     }
 
-    public void setTags(String tags) {
-        this.tags = tags;
+    public void setTags(List<TagEntity> tags) {
+        this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
     }
 
     public LocalDateTime getCreatedAt() {

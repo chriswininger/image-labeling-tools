@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @ApplicationScoped
 public class ImageInfoRepository {
@@ -14,12 +15,12 @@ public class ImageInfoRepository {
     EntityManager entityManager;
 
     @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final String tags) {
+    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags) {
         return save(fullPath, description, tags, null);
     }
 
     @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final String tags, final String thumbnailName) {
+    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName) {
         final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName);
         // ID will be generated in @PrePersist callback
         entityManager.persist(entity);
@@ -35,7 +36,7 @@ public class ImageInfoRepository {
     @Transactional
     public ImageInfoEntity findByFullPath(final String fullPath) {
         return entityManager.createQuery(
-            "SELECT e FROM ImageInfoEntity e WHERE e.fullPath = :fullPath",
+            "SELECT DISTINCT e FROM ImageInfoEntity e LEFT JOIN FETCH e.tags WHERE e.fullPath = :fullPath",
             ImageInfoEntity.class
         )
         .setParameter("fullPath", fullPath)

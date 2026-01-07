@@ -114,35 +114,86 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
   }
 
   try {
-    let query = 'SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_info';
     const params: any[] = [];
+    let query: string;
 
     // Apply tag filtering if tags are provided
     if (filterOptions?.tags && filterOptions.tags.length > 0) {
       const joinType = filterOptions.joinType || 'or';
-      // Use SQL to match tags in comma-separated string
-      // Match whole tags by checking for comma boundaries (handles spaces around commas)
-      const tagConditions = filterOptions.tags.map((tag) => {
-        const trimmedTag = tag.trim();
-        // Match patterns: tag at start, middle, or end of comma-separated list, or exact match
-        params.push(
-          `${trimmedTag},%`,      // Start: "tag, ..."
-          `%, ${trimmedTag},%`,  // Middle with space: "..., tag, ..."
-          `%,${trimmedTag},%`,   // Middle without space: "...,tag,..."
-          `%, ${trimmedTag}`,    // End with space: "..., tag"
-          `%,${trimmedTag}`,     // End without space: "...,tag"
-          trimmedTag              // Exact: "tag"
-        );
-        return `(tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags LIKE ? OR tags = ?)`;
+      
+      // Add tag names as parameters
+      filterOptions.tags.forEach(tag => {
+        params.push(tag.trim());
       });
-      // Join conditions with AND or OR based on joinType
-      const joinOperator = joinType === 'and' ? ' AND ' : ' OR ';
-      query += ` WHERE ${tagConditions.join(joinOperator)}`;
+
+      if (joinType === 'and') {
+        // For AND: images must have ALL the specified tags
+        // Use a subquery to filter images that have all tags, then join to get tag aggregation
+        query = `
+          SELECT 
+            ii.id, 
+            ii.full_path, 
+            ii.description, 
+            COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
+            ii.thumb_nail_name, 
+            ii.created_at, 
+            ii.updated_at 
+          FROM image_info ii
+          INNER JOIN (
+            SELECT iitj_filter.image_info_id
+            FROM image_info_tag_join iitj_filter
+            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+            GROUP BY iitj_filter.image_info_id
+            HAVING COUNT(DISTINCT t_filter.tag_name) = ?
+          ) filtered ON ii.id = filtered.image_info_id
+          LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
+          LEFT JOIN tags t ON iitj.tag_id = t.id
+          GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+        `;
+        params.push(filterOptions.tags.length);
+      } else {
+        // For OR: images must have AT LEAST ONE of the specified tags
+        query = `
+          SELECT 
+            ii.id, 
+            ii.full_path, 
+            ii.description, 
+            COALESCE(GROUP_CONCAT(DISTINCT t.tag_name, ', '), '') as tags,
+            ii.thumb_nail_name, 
+            ii.created_at, 
+            ii.updated_at 
+          FROM image_info ii
+          INNER JOIN image_info_tag_join iitj_filter ON ii.id = iitj_filter.image_info_id
+          INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+          LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
+          LEFT JOIN tags t ON iitj.tag_id = t.id
+          WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+          GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+        `;
+      }
+    } else {
+      // No filtering: get all images with their tags aggregated
+      query = `
+        SELECT 
+          ii.id, 
+          ii.full_path, 
+          ii.description, 
+          COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
+          ii.thumb_nail_name, 
+          ii.created_at, 
+          ii.updated_at 
+        FROM image_info ii
+        LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
+        LEFT JOIN tags t ON iitj.tag_id = t.id
+        GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+      `;
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY ii.created_at DESC';
 
     console.log('run query: ', query);
+    console.log('params: ', params);
     const stmt = db.prepare(query);
     const images = stmt.all(...params);
     return images;

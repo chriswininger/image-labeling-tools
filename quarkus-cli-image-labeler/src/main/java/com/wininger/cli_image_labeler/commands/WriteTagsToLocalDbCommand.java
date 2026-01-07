@@ -16,9 +16,14 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import com.wininger.cli_image_labeler.image.tagging.db.TagEntity;
 
 @Command(name = "write-tags-to-local-db", mixinStandardHelpOptions = true)
 public class WriteTagsToLocalDbCommand implements Runnable {
@@ -132,18 +137,17 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 throw new RuntimeException("Null tags were returned");
             }
 
-            // Convert tags list to string (comma-separated)
-            final String tagsString = String.join(", ", imageInfo.tags());
+            // Upsert all tags into the tags table and collect TagEntity objects
+            final List<TagEntity> tagEntities = imageInfo.tags().stream()
+                .map(tagRepository::upsertTag)
+                .collect(Collectors.toList());
 
-            // Upsert all tags into the tags table
-            for (String tag : imageInfo.tags()) {
-                tagRepository.upsertTag(tag);
-            }
+            final String tagsString = String.join(", ", imageInfo.tags());
 
             if (existing != null) {
                 // Update existing entry
                 existing.setDescription(imageInfo.fullDescription());
-                existing.setTags(tagsString);
+                existing.setTags(tagEntities);
                 existing.setThumbnailName(imageInfo.thumbnailName());
                 final ImageInfoEntity updated = imageTagRepository.update(existing);
 
@@ -157,7 +161,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 final ImageInfoEntity saved = imageTagRepository.save(
                     fullPath,
                     imageInfo.fullDescription(),
-                    tagsString,
+                    tagEntities,
                     imageInfo.thumbnailName()
                 );
 
