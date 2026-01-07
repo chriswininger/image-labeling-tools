@@ -154,21 +154,25 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
         params.push(filterOptions.tags.length);
       } else {
         // For OR: images must have AT LEAST ONE of the specified tags
+        // Use a subquery to filter images, then join to get all tags for those images
         query = `
           SELECT 
             ii.id, 
             ii.full_path, 
             ii.description, 
-            COALESCE(GROUP_CONCAT(DISTINCT t.tag_name, ', '), '') as tags,
+            COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
             ii.thumb_nail_name, 
             ii.created_at, 
             ii.updated_at 
           FROM image_info ii
-          INNER JOIN image_info_tag_join iitj_filter ON ii.id = iitj_filter.image_info_id
-          INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+          INNER JOIN (
+            SELECT DISTINCT iitj_filter.image_info_id
+            FROM image_info_tag_join iitj_filter
+            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+          ) filtered ON ii.id = filtered.image_info_id
           LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
           LEFT JOIN tags t ON iitj.tag_id = t.id
-          WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
           GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
         `;
       }
