@@ -114,7 +114,7 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
   }
 
   try {
-    let query = 'SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_tags';
+    let query = 'SELECT id, full_path, description, tags, thumb_nail_name, created_at, updated_at FROM image_info';
     const params: any[] = [];
 
     // Apply tag filtering if tags are provided
