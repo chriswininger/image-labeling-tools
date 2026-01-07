@@ -2,8 +2,8 @@ package com.wininger.cli_image_labeler;
 
 import com.wininger.cli_image_labeler.image.tagging.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.ImageInfoService;
-import com.wininger.cli_image_labeler.image.tagging.ImageTagEntity;
-import com.wininger.cli_image_labeler.image.tagging.ImageTagRepository;
+import com.wininger.cli_image_labeler.image.tagging.ImageInfoEntity;
+import com.wininger.cli_image_labeler.image.tagging.ImageInfoRepository;
 import com.wininger.cli_image_labeler.image.tagging.TagRepository;
 
 import jakarta.enterprise.context.control.ActivateRequestContext;
@@ -29,7 +29,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     boolean updateExisting;
 
     private final ImageInfoService imageInfoService;
-    private final ImageTagRepository imageTagRepository;
+    private final ImageInfoRepository imageTagRepository;
     private final TagRepository tagRepository;
 
     private static final Set<String> IMAGE_EXTENSIONS = Set.of(
@@ -39,7 +39,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     @Inject
     public WriteTagsToLocalDbCommand(
         final ImageInfoService imageInfoService,
-        final ImageTagRepository imageTagRepository,
+        final ImageInfoRepository imageTagRepository,
         final TagRepository tagRepository
     ) {
         this.imageInfoService = imageInfoService;
@@ -115,7 +115,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             System.out.println("\n=== Processing: " + fullPath + " ===");
 
             // Check if image already exists in database
-            final ImageTagEntity existing = imageTagRepository.findByFullPath(fullPath);
+            final ImageInfoEntity existing = imageTagRepository.findByFullPath(fullPath);
             if (existing != null) {
                 if (updateExisting) {
                     System.out.println("Image already exists in database, updating...");
@@ -145,7 +145,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 existing.setDescription(imageInfo.fullDescription());
                 existing.setTags(tagsString);
                 existing.setThumbnailName(imageInfo.thumbnailName());
-                final ImageTagEntity updated = imageTagRepository.update(existing);
+                final ImageInfoEntity updated = imageTagRepository.update(existing);
 
                 System.out.println("Updated database entry with ID: " + updated.getId());
                 System.out.println("Description: " + imageInfo.fullDescription());
@@ -154,7 +154,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
             } else {
                 // Save new entry to database
-                final ImageTagEntity saved = imageTagRepository.save(
+                final ImageInfoEntity saved = imageTagRepository.save(
                     fullPath,
                     imageInfo.fullDescription(),
                     tagsString,

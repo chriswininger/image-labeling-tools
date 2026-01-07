@@ -12,42 +12,42 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "image_info")
-public class ImageTagEntity {
-    
+public class ImageInfoEntity {
+
     @Id
     @GeneratedValue
     @Column(columnDefinition = "BLOB", length = 16)
     private UUID id;
-    
+
     @Column(nullable = false, length = 2048, name = "full_path")
     private String fullPath;
-    
+
     @Column(nullable = false, length = 10000)
     private String description;
-    
+
     @Column(nullable = false, length = 5000)
     private String tags; // Stored as comma-separated string or JSON
-    
+
     @Column(name = "thumb_nail_name")
     private String thumbnailName;
-    
+
     @Column(nullable = false, name = "created_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
-    
+
     @Column(nullable = false, name = "updated_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime updatedAt;
 
     // Default constructor for JPA
-    public ImageTagEntity() {
+    public ImageInfoEntity() {
     }
 
-    public ImageTagEntity(String fullPath, String description, String tags) {
+    public ImageInfoEntity(String fullPath, String description, String tags) {
         this(fullPath, description, tags, null);
     }
 
-    public ImageTagEntity(String fullPath, String description, String tags, String thumbnailName) {
+    public ImageInfoEntity(String fullPath, String description, String tags, String thumbnailName) {
         this.fullPath = fullPath;
         this.description = description;
         this.tags = tags;
