@@ -39,38 +39,10 @@ import static java.util.Objects.nonNull;
 @ApplicationScoped
 public class ImageInfoService
 {
-  // tried adding:
-  /*
-        * Don't output nulls, if you don't what tas to use, use "unknown", for example
-           `{"tags": ["unknown", "blurry"] , "description": "A blurry image possibly containing text" }
-   */
-  // but makes worse
-  private static final String PROMPT = """
-      Analyze this image carefully and describe what you actually see. Look at the subjects, objects, animals, people, text, colors, composition, and setting. Be specific and accurate.
-      
-      Return a JSON object with these REQUIRED fields:
-      
-      1. "tags" (array of strings): Specific descriptive tags based on what's actually in the image. Examples: ["chicken", "animal", "door"], ["person", "outdoor", "park"], ["text", "document"]. Be accurate - only tag what you actually see.
-      
-      2. "fullDescription" (string): A detailed, accurate description of what you see in the image. Describe the main subjects, their actions or positions, the setting, colors, and any notable details. Be specific and factual based on the image content.
-      
-      3. "shortTitle" (string): A concise title (max 100 characters) that captures the main subject or scene. Examples: "Chicken looking at door", "Person walking in park", "Document screenshot".
-      
-      4. "isText" (boolean): true ONLY if the image is primarily text content (like a document, screenshot of text, or text-heavy image). false for photos, illustrations, graphics, or images where text is not the main focus.
-      
-      IMPORTANT: 
-      - Describe what you ACTUALLY see in the image, not generic or abstract descriptions
-      - Be specific and accurate - if you see a chicken, say "chicken", not "abstract graphic"
-      - DO NOT include "thumbnailName" or any other fields
-      
-      Example response format:
-      {
-        "tags": ["chicken", "animal", "door"],
-        "fullDescription": "A close-up photograph of a brown chicken standing near a wooden door, looking directly at the door with its head turned toward it.",
-        "shortTitle": "Chicken looking at door",
-        "isText": false
-      }
-      """;
+  private static final String PROMPT = "Generate an image description and tags based on this image. " +
+      "You are a bot that tags images. You can create your own tags based on what you see but, " +
+      "be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. " +
+      "Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string)";
 
   private static final Integer NUM_MODEL_RETRIES = 5;
 
@@ -136,7 +108,6 @@ public class ImageInfoService
 
       // Parse the JSON response into ImageInfoModelResponse
       final String jsonResponse = chatResponse.aiMessage().text();
-      System.out.println("!!! token usage: " + chatResponse.tokenUsage());
       final ObjectMapper mapper = new ObjectMapper();
 
       final ImageInfoModelResponse modelResponse;
@@ -145,24 +116,17 @@ public class ImageInfoService
 
         // Validate all required fields are present
         if (nonNull(modelResponse.tags()) &&
-            nonNull(modelResponse.fullDescription()) &&
-            nonNull(modelResponse.shortTitle()) &&
-            nonNull(modelResponse.isText())) {
+            nonNull(modelResponse.fullDescription())) {
+          System.out.println("token usage: " + chatResponse.tokenUsage());
+
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
               modelResponse.tags(),
-              modelResponse.fullDescription(),
-              modelResponse.shortTitle(),
-              modelResponse.isText()
-          );
+              modelResponse.fullDescription());
         } else {
           // Log which fields are missing
-          System.out.println("Missing required fields in model response for image: " + imagePath);
-          System.out.println("tags: " + (nonNull(modelResponse.tags()) ? "present" : "MISSING"));
-          System.out.println("fullDescription: " + (nonNull(modelResponse.fullDescription()) ? "present" : "MISSING"));
-          System.out.println("shortTitle: " + (nonNull(modelResponse.shortTitle()) ? "present" : "MISSING"));
-          System.out.println("isText: " + (nonNull(modelResponse.isText()) ? "present" : "MISSING"));
-          System.out.println("Raw response: " + jsonResponse);
+          System.out.println("Missing required fields in model response for image: " + chatResponse.aiMessage().text());
+          System.out.println("token usage: " + chatResponse.tokenUsage());
         }
       }
       catch (JsonProcessingException e) {
