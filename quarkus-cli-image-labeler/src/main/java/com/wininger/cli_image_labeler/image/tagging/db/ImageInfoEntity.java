@@ -41,6 +41,12 @@ public class ImageInfoEntity {
     @Column(name = "thumb_nail_name")
     private String thumbnailName;
 
+    @Column(name = "short_title", length = 100)
+    private String shortTitle;
+
+    @Column(name = "is_text")
+    private Boolean isText;
+
     @Column(nullable = false, name = "created_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
@@ -53,15 +59,20 @@ public class ImageInfoEntity {
     public ImageInfoEntity() {
     }
 
-    public ImageInfoEntity(String fullPath, String description, List<TagEntity> tags) {
-        this(fullPath, description, tags, null);
-    }
-
-    public ImageInfoEntity(String fullPath, String description, List<TagEntity> tags, String thumbnailName) {
+    public ImageInfoEntity(
+      String fullPath,
+      String description,
+      List<TagEntity> tags,
+      String thumbnailName,
+      String shortTitle,
+      Boolean isText
+    ) {
         this.fullPath = fullPath;
         this.description = description;
         this.tags = tags != null ? new ArrayList<>(tags) : new ArrayList<>();
         this.thumbnailName = thumbnailName;
+        this.shortTitle = shortTitle;
+        this.isText = isText != null ? isText : false;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -134,6 +145,22 @@ public class ImageInfoEntity {
 
     public void setThumbnailName(String thumbnailName) {
         this.thumbnailName = thumbnailName;
+    }
+
+    public String getShortTitle() {
+        return shortTitle;
+    }
+
+    public void setShortTitle(String shortTitle) {
+        this.shortTitle = shortTitle;
+    }
+
+    public Boolean getIsText() {
+        return isText;
+    }
+
+    public void setIsText(Boolean isText) {
+        this.isText = isText != null ? isText : false;
     }
 }
 

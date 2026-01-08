@@ -149,11 +149,15 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 existing.setDescription(imageInfo.fullDescription());
                 existing.setTags(tagEntities);
                 existing.setThumbnailName(imageInfo.thumbnailName());
+                existing.setShortTitle(imageInfo.shortTitle());
+                existing.setIsText(imageInfo.isText());
                 final ImageInfoEntity updated = imageTagRepository.update(existing);
 
                 System.out.println("Updated database entry with ID: " + updated.getId());
+                System.out.println("Title: " + imageInfo.shortTitle());
                 System.out.println("Description: " + imageInfo.fullDescription());
                 System.out.println("Tags: " + tagsString);
+                System.out.println("isText: " + imageInfo.isText());
                 System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
                 System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
             } else {
@@ -162,12 +166,16 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                     fullPath,
                     imageInfo.fullDescription(),
                     tagEntities,
-                    imageInfo.thumbnailName()
+                    imageInfo.thumbnailName(),
+                    imageInfo.shortTitle(),
+                    imageInfo.isText()
                 );
 
                 System.out.println("Saved to database with ID: " + saved.getId());
+                System.out.println("Title: " + imageInfo.shortTitle());
                 System.out.println("Description: " + imageInfo.fullDescription());
                 System.out.println("Tags: " + tagsString);
+                System.out.println("isText: " + imageInfo.isText());
                 System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
                 System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
             }

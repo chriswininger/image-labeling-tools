@@ -51,10 +51,16 @@ public class ImageInfoService
            person, building, flower, flowers, tree, trees, animal, animals, chicken, bird, texture, text
       * Don't use the above labels if they don't make sense.
       * Don't overuse texture. Only use it for things like geometric patterns, pictures of rocks and foliage, or
-        shots that look like they were taken for use in texture mapping 
-      * Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string).
-      * If you can't tell what's in an image you can respond with something like this:
-           {"tags": ["unknown"] , "description": "A blurry image possibly containing text." }
+        shots that look like they were taken for use in texture mapping.
+      * Return a JSON object with the following REQUIRED fields:
+          - 'tags' (array of strings): A list of tags describing the image
+          - 'fullDescription' (string): A full generic description of the image contents
+          - 'shortTitle' (string): A very short title for the image (max 100 characters). This is REQUIRED - always provide a title.
+          - 'isText' (boolean): True if the main focus of the image is text, false otherwise. This is REQUIRED - always provide a boolean value.
+      * Example response format:
+           {"tags": ["unknown"], "fullDescription": "A blurry image possibly containing text.", "shortTitle": "Unknown Image", "isText": false}
+      * For images that are primarily text (like screenshots of documents, text-heavy images, etc.), set isText to true.
+      * For images that are primarily visual (photos, graphics, etc.), set isText to false.
       
       Generate an image description and tags based on this image. \
       """;
@@ -98,7 +104,13 @@ public class ImageInfoService
           .toList()
         : null;
 
-    return new ImageInfo(deduplicatedTags, imageInfo.fullDescription(), thumbnailName);
+    return new ImageInfo(
+        deduplicatedTags,
+        imageInfo.fullDescription(),
+        imageInfo.shortTitle(),
+        imageInfo.isText(),
+        thumbnailName
+    );
   }
 
   private ImageInfo generateImageInfo(final ImageContent imageContent, final String imagePath) {
@@ -123,12 +135,21 @@ public class ImageInfoService
         imageInfo = mapper.readValue(jsonResponse, ImageInfo.class);
 
         if (nonNull(imageInfo.tags())) {
+          // Check if shortTitle or isText are null and log a warning
+          if (imageInfo.shortTitle() == null) {
+            System.out.println("Warning: shortTitle is null in model response for image: " + imagePath);
+            System.out.println("Raw response: " + jsonResponse);
+          }
+          if (imageInfo.isText() == null) {
+            System.out.println("Warning: isText is null in model response for image: " + imagePath);
+            System.out.println("Raw response: " + jsonResponse);
+          }
           // it worked we are done
           return imageInfo;
         } else {
           // sometimes the model returns, but the object gets parsed to all nulls, often trying again resolves this
           System.out.println("Null tags were returned from the model");
-          System.out.println("rew response: " + jsonResponse);
+          System.out.println("Raw response: " + jsonResponse);
         }
       }
       catch (JsonProcessingException e) {
