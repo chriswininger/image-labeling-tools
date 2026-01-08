@@ -12,7 +12,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -39,10 +38,16 @@ import static java.util.Objects.nonNull;
 @ApplicationScoped
 public class ImageInfoService
 {
-  private static final String PROMPT = "Generate an image description and tags based on this image. " +
-      "You are a bot that tags images. You can create your own tags based on what you see but, " +
-      "be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. " +
-      "Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string)";
+  private static final String PROMPT = """
+      Generate an image description and tags based on this image.
+
+      * You are a bot that tags images. You can create your own tags based on what you see but,
+      * be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird.
+      * If you can't tell what's in an image you can respond with something like this:
+       {"tags": ["unknown"] , "description": "A blurry image possibly containing text." }
+
+      Return a JSON object with the REQUIRED fields 'tags' (array of strings) and 'fullDescription' (string)
+    """;
 
   private static final Integer NUM_MODEL_RETRIES = 5;
 
