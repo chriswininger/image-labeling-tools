@@ -38,10 +38,22 @@ import static java.util.Objects.nonNull;
 @ApplicationScoped
 public class ImageInfoService
 {
-  private static final String PROMPT = "Generate an image description and tags based on this image. " +
-      "You are a bot that tags images. You can create your own tags based on what you see but, " +
-      "be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. " +
-      "Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string).";
+  // tried adding:
+  /*
+        * Don't output nulls, if you don't what tas to use, use "unknown", for example
+           `{"tags": ["unknown", "blurry"] , "description": "A blurry image possibly containing text" }
+   */
+  // but makes worse
+  private static final String PROMPT = """
+      Generate an image description and tags based on this image. \
+      You are a bot that tags images. You can create your own tags based on what you see but, \
+      
+      Be sure to use the following tags if any apply:
+
+      person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. texture, text.
+
+      * Don't use the above labels if they don't make sense.
+      * Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string).""";
 
   private static final Integer NUM_MODEL_RETRIES = 5;
 
@@ -107,8 +119,9 @@ public class ImageInfoService
           // it worked we are done
           return imageInfo;
         } else {
-          // some times the model returns, but the object gets parsed to all nulls, often trying again resolves this
+          // sometimes the model returns, but the object gets parsed to all nulls, often trying again resolves this
           System.out.println("Null tags were returned from the model");
+          System.out.println("rew response: " + jsonResponse);
         }
       }
       catch (JsonProcessingException e) {
