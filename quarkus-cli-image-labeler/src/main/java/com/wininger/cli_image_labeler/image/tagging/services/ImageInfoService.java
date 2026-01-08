@@ -45,15 +45,19 @@ public class ImageInfoService
    */
   // but makes worse
   private static final String PROMPT = """
-      Generate an image description and tags based on this image. \
-      You are a bot that tags images. You can create your own tags based on what you see but, \
+      You are a bot that tags images. You can create your own tags. \
       
-      Be sure to use the following tags if any apply:
-
-      person, building, flower, flowers, tree, trees, animal, animals, chicken, bird. texture, text.
-
+      * Be sure to use the following tags if (and only if) they apply:
+           person, building, flower, flowers, tree, trees, animal, animals, chicken, bird, texture, text
       * Don't use the above labels if they don't make sense.
-      * Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string).""";
+      * Don't overuse texture. Only use it for things like geometric patterns, pictures of rocks and foliage, or
+        shots that look like they were taken for use in texture mapping 
+      * Return a JSON object with 'tags' (array of strings) and 'fullDescription' (string).
+      * If you can't tell what's in an image you can respond with something like this:
+           {"tags": ["unknown"] , "description": "A blurry image possibly containing text." }
+      
+      Generate an image description and tags based on this image. \
+      """;
 
   private static final Integer NUM_MODEL_RETRIES = 5;
 
@@ -88,7 +92,10 @@ public class ImageInfoService
         ? new HashSet<>(
             // conver to lowercase before de-duplicating
             imageInfo.tags().stream().map(String::toLowerCase).toList()
-        ).stream().sorted().toList()
+        ).stream()
+          .filter(str  -> !str.isBlank())
+          .sorted()
+          .toList()
         : null;
 
     return new ImageInfo(deduplicatedTags, imageInfo.fullDescription(), thumbnailName);
