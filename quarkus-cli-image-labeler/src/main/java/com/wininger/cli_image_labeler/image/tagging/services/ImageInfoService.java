@@ -46,25 +46,30 @@ public class ImageInfoService
    */
   // but makes worse
   private static final String PROMPT = """
-      You are a bot that analyzes images and returns structured data. You MUST return a JSON object with ALL of the following fields:
+      Analyze this image carefully and describe what you actually see. Look at the subjects, objects, animals, people, text, colors, composition, and setting. Be specific and accurate.
       
-      REQUIRED FIELDS (all must be present):
-      1. "tags" (array of strings): A list of descriptive tags for the image. Must be an array, even if empty. Example: ["person", "outdoor", "sunny"]
-      2. "fullDescription" (string): A detailed description of what you see in the image. Cannot be null or empty.
-      3. "shortTitle" (string): A very short title (max 100 characters). Example: "Person walking in park"
-      4. "isText" (boolean): Set to true ONLY if the image is primarily text (like a document screenshot, text-heavy image). Set to false for photos, graphics, illustrations, etc.
+      Return a JSON object with these REQUIRED fields:
       
-      DO NOT include any other fields. Do not include "thumbnailName" or any other fields not listed above.
+      1. "tags" (array of strings): Specific descriptive tags based on what's actually in the image. Examples: ["chicken", "animal", "door"], ["person", "outdoor", "park"], ["text", "document"]. Be accurate - only tag what you actually see.
       
-      Example valid response:
+      2. "fullDescription" (string): A detailed, accurate description of what you see in the image. Describe the main subjects, their actions or positions, the setting, colors, and any notable details. Be specific and factual based on the image content.
+      
+      3. "shortTitle" (string): A concise title (max 100 characters) that captures the main subject or scene. Examples: "Chicken looking at door", "Person walking in park", "Document screenshot".
+      
+      4. "isText" (boolean): true ONLY if the image is primarily text content (like a document, screenshot of text, or text-heavy image). false for photos, illustrations, graphics, or images where text is not the main focus.
+      
+      IMPORTANT: 
+      - Describe what you ACTUALLY see in the image, not generic or abstract descriptions
+      - Be specific and accurate - if you see a chicken, say "chicken", not "abstract graphic"
+      - DO NOT include "thumbnailName" or any other fields
+      
+      Example response format:
       {
-        "tags": ["person", "outdoor"],
-        "fullDescription": "A person walking through a sunny park",
-        "shortTitle": "Person in park",
+        "tags": ["chicken", "animal", "door"],
+        "fullDescription": "A close-up photograph of a brown chicken standing near a wooden door, looking directly at the door with its head turned toward it.",
+        "shortTitle": "Chicken looking at door",
         "isText": false
       }
-      
-      Analyze the image and return the JSON object with all four required fields.
       """;
 
   private static final Integer NUM_MODEL_RETRIES = 5;
