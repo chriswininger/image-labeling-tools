@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ImageData } from '../../types/electron';
+import { toast } from 'react-toastify';
+import '@fortawesome/fontawesome-free/css/all.css';
 import './ImageModal.css';
 
 interface ImageModalProps {
@@ -21,17 +23,20 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
   }
 
   const tags = parseTags(image.tags || '');
-  const filename = getFilename(image.full_path);
 
   return (
     <div className="image-modal-overlay" onClick={handleOverlayClick}>
       <div className="image-modal-content" onClick={(e) => e.stopPropagation()}>
-        <button className="image-modal-close" onClick={onClose} aria-label="Close modal">
+        <button
+          className="image-modal-close"
+          onClick={onClose}
+          aria-label="Close modal"
+        >
           ×
         </button>
 
         <div className="image-modal-header">
-          <div className="image-modal-filename">{filename}</div>
+          <FileName image={image} />
         </div>
 
         <div className="image-modal-image-container">
@@ -79,11 +84,6 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  }
-
-  function getFilename(fullPath: string): string {
-    const parts = fullPath.split(/[/\\]/);
-    return parts[parts.length - 1] || fullPath;
   }
 
   function parseTags(tagsString: string): string[] {
@@ -149,6 +149,48 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
         setImageUrl(dataUrl);
         setLoading(false)
       });
+  }
+}
+
+function FileName({ image } : { image: ImageData }) {
+  return <div className="image-modal-filename-container">
+    <div
+      className="image-modal-filename"
+      title={image?.full_path}
+    >
+      {getFilename(image.full_path)}
+      <button
+        className="image-modal-copy-button"
+        onClick={handleCopyPath}
+        title="Copy full path to clipboard"
+        aria-label="Copy full path to clipboard"
+      >
+        <i className="fas fa-copy"></i>
+      </button>
+    </div>
+  </div>
+
+  function getFilename(fullPath: string): string {
+    const parts = fullPath.split(/[/\\]/);
+    return parts[parts.length - 1] || fullPath;
+  }
+
+  function handleCopyPath(e: React.MouseEvent<HTMLButtonElement>) {
+    e.stopPropagation();
+    if (image?.full_path) {
+      navigator.clipboard.writeText(image.full_path)
+        .then(() => {
+          toast.success(
+            'Absolute path to image copied', {
+              position: 'top-right',
+              autoClose: 3000
+            });
+        })
+        .catch((err) => {
+          console.error('Failed to copy to clipboard:', err);
+          toast.error('Failed to copy path to clipboard');
+        });
+    }
   }
 }
 

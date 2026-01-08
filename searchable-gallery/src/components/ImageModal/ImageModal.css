@@ -50,8 +50,15 @@
 }
 
 .image-modal-header {
-  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  padding: 1.5rem 4rem 1rem 1.5rem;
   border-bottom: 1px solid #e0e0e0;
+  position: relative;
+}
+
+.image-modal-filename-container {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .image-modal-filename {
@@ -59,6 +66,27 @@
   font-weight: 500;
   color: #333;
   word-break: break-all;
+  min-width: 0;
+}
+
+.image-modal-copy-button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #666;
+  transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+  display: inline;
+}
+
+.image-modal-copy-button:hover {
+  background: #f0f0f0;
+  border-color: #999;
+  color: #333;
+}
+
+.image-modal-copy-button:active {
+  background: #e0e0e0;
 }
 
 .image-modal-image-container {
