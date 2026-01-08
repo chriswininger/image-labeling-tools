@@ -23,6 +23,7 @@ import javax.imageio.stream.ImageOutputStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoModelResponse;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -45,24 +46,25 @@ public class ImageInfoService
    */
   // but makes worse
   private static final String PROMPT = """
-      You are a bot that tags images. You can create your own tags. \
+      You are a bot that analyzes images and returns structured data. You MUST return a JSON object with ALL of the following fields:
       
-      * Be sure to use the following tags if (and only if) they apply:
-           person, building, flower, flowers, tree, trees, animal, animals, chicken, bird, texture, text
-      * Don't use the above labels if they don't make sense.
-      * Don't overuse texture. Only use it for things like geometric patterns, pictures of rocks and foliage, or
-        shots that look like they were taken for use in texture mapping.
-      * Return a JSON object with the following REQUIRED fields:
-          - 'tags' (array of strings): A list of tags describing the image
-          - 'fullDescription' (string): A full generic description of the image contents
-          - 'shortTitle' (string): A very short title for the image (max 100 characters). This is REQUIRED - always provide a title.
-          - 'isText' (boolean): True if the main focus of the image is text, false otherwise. This is REQUIRED - always provide a boolean value.
-      * Example response format:
-           {"tags": ["unknown"], "fullDescription": "A blurry image possibly containing text.", "shortTitle": "Unknown Image", "isText": false}
-      * For images that are primarily text (like screenshots of documents, text-heavy images, etc.), set isText to true.
-      * For images that are primarily visual (photos, graphics, etc.), set isText to false.
+      REQUIRED FIELDS (all must be present):
+      1. "tags" (array of strings): A list of descriptive tags for the image. Must be an array, even if empty. Example: ["person", "outdoor", "sunny"]
+      2. "fullDescription" (string): A detailed description of what you see in the image. Cannot be null or empty.
+      3. "shortTitle" (string): A very short title (max 100 characters). Example: "Person walking in park"
+      4. "isText" (boolean): Set to true ONLY if the image is primarily text (like a document screenshot, text-heavy image). Set to false for photos, graphics, illustrations, etc.
       
-      Generate an image description and tags based on this image. \
+      DO NOT include any other fields. Do not include "thumbnailName" or any other fields not listed above.
+      
+      Example valid response:
+      {
+        "tags": ["person", "outdoor"],
+        "fullDescription": "A person walking through a sunny park",
+        "shortTitle": "Person in park",
+        "isText": false
+      }
+      
+      Analyze the image and return the JSON object with all four required fields.
       """;
 
   private static final Integer NUM_MODEL_RETRIES = 5;
@@ -75,11 +77,12 @@ public class ImageInfoService
   public ImageInfoService() {
     final var responseFormat = ResponseFormat.builder()
         .type(ResponseFormatType.JSON)
-        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfo.class).get())
+        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoModelResponse.class).get())
         .build();
 
     model = OllamaChatModel.builder()
         .modelName("gemma3:4b")
+        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
         .baseUrl("http://localhost:11434/")
         .responseFormat(responseFormat)
         .build();
@@ -126,36 +129,42 @@ public class ImageInfoService
       final UserMessage userMessage = UserMessage.from(question, imageContent);
       final ChatResponse chatResponse = model.chat(userMessage);
 
-      // Parse the JSON response into ImageInfo
+      // Parse the JSON response into ImageInfoModelResponse
       final String jsonResponse = chatResponse.aiMessage().text();
+      System.out.println("!!! token usage: " + chatResponse.tokenUsage());
       final ObjectMapper mapper = new ObjectMapper();
 
-      final ImageInfo imageInfo;
+      final ImageInfoModelResponse modelResponse;
       try {
-        imageInfo = mapper.readValue(jsonResponse, ImageInfo.class);
+        modelResponse = mapper.readValue(jsonResponse, ImageInfoModelResponse.class);
 
-        if (nonNull(imageInfo.tags())) {
-          // Check if shortTitle or isText are null and log a warning
-          if (imageInfo.shortTitle() == null) {
-            System.out.println("Warning: shortTitle is null in model response for image: " + imagePath);
-            System.out.println("Raw response: " + jsonResponse);
-          }
-          if (imageInfo.isText() == null) {
-            System.out.println("Warning: isText is null in model response for image: " + imagePath);
-            System.out.println("Raw response: " + jsonResponse);
-          }
-          // it worked we are done
-          return imageInfo;
+        // Validate all required fields are present
+        if (nonNull(modelResponse.tags()) &&
+            nonNull(modelResponse.fullDescription()) &&
+            nonNull(modelResponse.shortTitle()) &&
+            nonNull(modelResponse.isText())) {
+          // Convert to ImageInfo (without thumbnailName, which will be added later)
+          return new ImageInfo(
+              modelResponse.tags(),
+              modelResponse.fullDescription(),
+              modelResponse.shortTitle(),
+              modelResponse.isText()
+          );
         } else {
-          // sometimes the model returns, but the object gets parsed to all nulls, often trying again resolves this
-          System.out.println("Null tags were returned from the model");
+          // Log which fields are missing
+          System.out.println("Missing required fields in model response for image: " + imagePath);
+          System.out.println("tags: " + (nonNull(modelResponse.tags()) ? "present" : "MISSING"));
+          System.out.println("fullDescription: " + (nonNull(modelResponse.fullDescription()) ? "present" : "MISSING"));
+          System.out.println("shortTitle: " + (nonNull(modelResponse.shortTitle()) ? "present" : "MISSING"));
+          System.out.println("isText: " + (nonNull(modelResponse.isText()) ? "present" : "MISSING"));
           System.out.println("Raw response: " + jsonResponse);
         }
       }
       catch (JsonProcessingException e) {
-        // I haven't seen this yet, but hypothetically it could happen and this is a checked exception,
-        // if it happens log the exception and try again
-        System.out.println("Error parsing model: " + e.getMessage());
+        // JSON parsing failed - log the error and raw response for debugging
+        System.out.println("Error parsing JSON response from model for image: " + imagePath);
+        System.out.println("Error: " + e.getMessage());
+        System.out.println("Raw response: " + jsonResponse);
       }
 
       // we did not return a result, increment and decide if we should try again
