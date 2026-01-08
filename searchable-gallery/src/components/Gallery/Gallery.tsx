@@ -2,7 +2,9 @@ import { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { fetchAllImages, fetchAllTags } from '../../store/gallerySlice';
 import ImageThumbnail from '../ImageThumbnail/ImageThumbnail';
+import ImageModal from '../ImageModal/ImageModal';
 import MultiSelect, { MultiSelectOption } from '../MultiSelect/MultiSelect';
+import type { ImageData } from '../../types/electron';
 import './Gallery.css'
 
 function Gallery() {
@@ -10,6 +12,7 @@ function Gallery() {
   const { images, tags, status, tagsStatus, error } = useAppSelector((state) => state.gallery);
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [joinType, setJoinType] = useState<'and' | 'or'>('and');
+  const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
 
   // Load images; fires again if filter options change
   useEffect(() => {
@@ -94,10 +97,17 @@ function Gallery() {
               key={image.id}
               image={image}
               onTagClick={handleTagClick}
+              onClick={() => setSelectedImage(image)}
             />
           ))}
         </div>
       )}
+
+      <ImageModal
+        image={selectedImage}
+        onClose={() => setSelectedImage(null)}
+        onTagClick={handleModalTagClick}
+      />
     </div>
   );
 
@@ -110,6 +120,15 @@ function Gallery() {
     if (!selectedValues.includes(tag)) {
       setSelectedValues([...selectedValues, tag]);
     }
+  }
+
+  function handleModalTagClick(tag: string) {
+    // Add tag to selected tags if it's not already selected
+    if (!selectedValues.includes(tag)) {
+      setSelectedValues([...selectedValues, tag]);
+    }
+    // Close the modal when a tag is clicked
+    setSelectedImage(null);
   }
 }
 

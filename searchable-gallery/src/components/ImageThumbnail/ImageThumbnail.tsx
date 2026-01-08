@@ -5,9 +5,10 @@ import "./ImageThumbnail.css"
 interface ImageThumbnailProps {
   image: ImageData;
   onTagClick?: (tag: string) => void;
+  onClick?: () => void;
 }
 
-function ImageThumbnail({ image, onTagClick }: ImageThumbnailProps) {
+function ImageThumbnail({ image, onTagClick, onClick }: ImageThumbnailProps) {
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +46,7 @@ function ImageThumbnail({ image, onTagClick }: ImageThumbnailProps) {
   const tags = parseTags(image.tags || '');
 
   return (
-    <div className="image-thumbnail">
+    <div className="image-thumbnail" onClick={onClick}>
       <div className="thumbnail-description" title={image.description}>
         {image.description}
       </div>
