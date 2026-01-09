@@ -21,6 +21,7 @@ export interface ImageData {
   id: string;
   full_path: string;
   description: string;
+  short_title: string | null;
   tags: string;
   thumb_nail_name: string | null;
   created_at: string;

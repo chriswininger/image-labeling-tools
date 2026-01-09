@@ -39,6 +39,12 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
           <FileName image={image} />
         </div>
 
+        {image.short_title && (
+          <div className="image-modal-title">
+            {image.short_title}
+          </div>
+        )}
+
         <div className="image-modal-image-container">
           {loading ? (
             <div className="image-modal-loading">Loading image...</div>
@@ -47,7 +53,7 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
           ) : imageUrl ? (
             <img
               src={imageUrl}
-              alt={image.description || 'Image'}
+              alt={image.short_title || image.description || 'Image'}
               className="image-modal-image"
               onError={() => setError('Failed to load image')}
             />

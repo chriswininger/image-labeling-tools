@@ -133,7 +133,8 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
           SELECT 
             ii.id, 
             ii.full_path, 
-            ii.description, 
+            ii.description,
+            ii.short_title,
             COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
             ii.thumb_nail_name, 
             ii.created_at, 
@@ -149,7 +150,7 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
           ) filtered ON ii.id = filtered.image_info_id
           LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
           LEFT JOIN tags t ON iitj.tag_id = t.id
-          GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+          GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.created_at, ii.updated_at
         `;
         params.push(filterOptions.tags.length);
       } else {
@@ -159,7 +160,8 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
           SELECT 
             ii.id, 
             ii.full_path, 
-            ii.description, 
+            ii.description,
+            ii.short_title,
             COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
             ii.thumb_nail_name, 
             ii.created_at, 
@@ -173,7 +175,7 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
           ) filtered ON ii.id = filtered.image_info_id
           LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
           LEFT JOIN tags t ON iitj.tag_id = t.id
-          GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+          GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.created_at, ii.updated_at
         `;
       }
     } else {
@@ -182,7 +184,8 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
         SELECT 
           ii.id, 
           ii.full_path, 
-          ii.description, 
+          ii.description,
+          ii.short_title,
           COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
           ii.thumb_nail_name, 
           ii.created_at, 
@@ -190,7 +193,7 @@ ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]
         FROM image_info ii
         LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
         LEFT JOIN tags t ON iitj.tag_id = t.id
-        GROUP BY ii.id, ii.full_path, ii.description, ii.thumb_nail_name, ii.created_at, ii.updated_at
+        GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.created_at, ii.updated_at
       `;
     }
 

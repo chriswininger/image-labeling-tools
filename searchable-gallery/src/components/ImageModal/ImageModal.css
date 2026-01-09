@@ -55,6 +55,16 @@
   position: relative;
 }
 
+.image-modal-title {
+  padding: 1rem 1.5rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  background-color: #fafafa;
+}
+
 .image-modal-filename-container {
   display: flex;
   align-items: center;

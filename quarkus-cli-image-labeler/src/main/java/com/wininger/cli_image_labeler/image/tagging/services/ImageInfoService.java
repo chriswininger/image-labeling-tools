@@ -23,13 +23,16 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoTitleModelResponse;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
 import dev.langchain4j.model.chat.request.ResponseFormatType;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.output.JsonSchemas;
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -52,7 +55,9 @@ public class ImageInfoService
   private static final Integer NUM_MODEL_RETRIES = 5;
 
   // Maximum dimension (width or height) for resized images to avoid timeouts
-  private static final int MAX_IMAGE_DIMENSION = 600;
+  private static final int MAX_IMAGE_DIMENSION = 1024;
+
+  private static final int IMAGE_DIMENSION_FOR_THUMBNAIL = 500;
 
   private final OllamaChatModel model;
 
@@ -71,7 +76,20 @@ public class ImageInfoService
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
-    final ImageContent imageContent = getImageContent(imagePath, keepThumbnails);
+    // Load and resize the image
+    final BufferedImage originalImage;
+
+    try {
+      originalImage = ImageIO.read(Paths.get(imagePath).toFile());
+    } catch (IOException ex) {
+      throw new RuntimeException("Could not read image file", ex);
+    }
+
+    if (originalImage == null) {
+      throw new RuntimeException("Could not read image: " + imagePath);
+    }
+
+    final ImageContent imageContent = getImageContent(imagePath, originalImage);
     final ImageInfo imageInfo = generateImageInfo(imageContent, imagePath);
 
     // Generate a thumbnail filename and add it to ImageInfo (the thumbnail its self has already been saved at this point
@@ -88,6 +106,20 @@ public class ImageInfoService
           .sorted()
           .toList()
         : null;
+
+    if (keepThumbnails) {
+      // Save thumbnail to archive
+      final byte[] imageBytesForThumbnail;
+      try {
+        imageBytesForThumbnail = imageToJpegBytes(
+            resizeImage(originalImage, IMAGE_DIMENSION_FOR_THUMBNAIL), 0.85f);
+      }
+      catch (IOException e) {
+        throw new RuntimeException("Error Saving thumbnail: ", e);
+      }
+
+      saveThumbnail(imagePath, imageBytesForThumbnail);
+    }
 
     return new ImageInfo(
         deduplicatedTags,
@@ -124,10 +156,26 @@ public class ImageInfoService
             nonNull(modelResponse.fullDescription())) {
           System.out.println("token usage: " + chatResponse.tokenUsage());
 
+          // -- TEMP
+          final ChatModel chatModelTitle = OllamaChatModel.builder()
+              .modelName("gemma3:4b")
+              .baseUrl("http://localhost:11434/")
+              .build();
+
+          final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
+              .chatModel(chatModelTitle)
+              .build();
+
+          final ImageInfoTitleModelResponse storyInfo = titleTx.extractTitle(modelResponse.fullDescription());
+          // -------
+
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
               modelResponse.tags(),
-              modelResponse.fullDescription());
+              modelResponse.fullDescription(),
+              storyInfo.shortTitle(),
+              null,
+              null);
         } else {
           // Log which fields are missing
           System.out.println("Missing required fields in model response for image: " + chatResponse.aiMessage().text());
@@ -149,16 +197,10 @@ public class ImageInfoService
     throw new RuntimeException("Could not generate Image Info after %s tries".formatted(NUM_MODEL_RETRIES));
   }
 
-  private ImageContent getImageContent(final String imagePath, final boolean keepThumbnails) {
+  private ImageContent getImageContent(final String imagePath, BufferedImage originalImage) {
     try {
-      // Get original file size
+      // Get the original file size
       final long originalFileSize = Files.size(Paths.get(imagePath));
-
-      // Load and resize the image
-      final BufferedImage originalImage = ImageIO.read(Paths.get(imagePath).toFile());
-      if (originalImage == null) {
-        throw new RuntimeException("Could not read image: " + imagePath);
-      }
 
       final int originalWidth = originalImage.getWidth();
       final int originalHeight = originalImage.getHeight();
@@ -181,11 +223,6 @@ public class ImageInfoService
       final String base64Img = Base64.getEncoder().encodeToString(imageBytes);
       final long base64Size = base64Img.length();
       System.out.printf("Base64 size: %.1f KB%n", base64Size / 1024.0);
-
-      if (keepThumbnails) {
-        // Save thumbnail to archive
-        saveThumbnail(imagePath, imageBytes);
-      }
 
       return ImageContent.from(base64Img, "image/jpeg");
     }

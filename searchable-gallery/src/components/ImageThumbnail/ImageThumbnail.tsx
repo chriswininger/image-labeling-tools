@@ -45,17 +45,19 @@ function ImageThumbnail({ image, onTagClick, onClick }: ImageThumbnailProps) {
 
   const tags = parseTags(image.tags || '');
 
+  const displayTitle = image.short_title || image.description || 'Image';
+
   return (
     <div className="image-thumbnail" onClick={onClick}>
-      <div className="thumbnail-description" title={image.description}>
-        {image.description}
+      <div className="thumbnail-description" title={displayTitle}>
+        {displayTitle}
       </div>
       {error ? (
         <div className="thumbnail-error">{error}</div>
       ) : thumbnailUrl ? (
         <img
           src={thumbnailUrl}
-          alt={image.description || 'Image'}
+          alt={displayTitle}
           title={image.description || ''}
           className="thumbnail-image"
           onError={() => setError('Failed to load image')}
