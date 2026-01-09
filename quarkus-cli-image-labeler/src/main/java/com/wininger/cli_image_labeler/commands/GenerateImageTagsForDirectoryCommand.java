@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Set;
 import java.util.stream.Stream;
 
@@ -72,7 +73,34 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
             System.out.println("Image Info: " + imageInfo);
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
+            writeFailedImageProcess(imagePath, e);
             // Continue processing other images even if one fails
+        }
+    }
+
+    private void writeFailedImageProcess(final Path imagePath, final Exception exception) {
+        try {
+            final Path logFile = Paths.get("data", "failed-image-processing.log");
+            final String fullPath = imagePath.toAbsolutePath().toString();
+            final String exceptionClass = exception.getClass().getName();
+            final String logEntry = "\"" + fullPath + "\", \"" + exceptionClass + "\"\n";
+
+            // Create a data directory if it doesn't exist
+            final Path dataDir = Paths.get("data");
+            if (!Files.exists(dataDir)) {
+                Files.createDirectories(dataDir);
+            }
+
+            // Append to a log file (create if it doesn't exist)
+            Files.writeString(
+                logFile,
+                logEntry,
+                StandardOpenOption.CREATE,
+                StandardOpenOption.APPEND
+            );
+        } catch (IOException e) {
+            // If we can't write to the log file, just print a warning
+            System.err.println("Warning: Failed to write to failed-image-processing.log: " + e.getMessage());
         }
     }
 }

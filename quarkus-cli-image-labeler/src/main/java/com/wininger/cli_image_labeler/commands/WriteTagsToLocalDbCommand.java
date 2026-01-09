@@ -16,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -56,8 +57,9 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     @ActivateRequestContext
     public void run() {
         final long startTime = System.currentTimeMillis();
-        final Path directory = Paths.get(directoryPath);
+        final String failLogName = "failed-image-processing-%s.log".formatted(startTime);
 
+        final Path directory = Paths.get(directoryPath);
         if (!Files.exists(directory)) {
             System.err.println("Error: Directory does not exist: " + directoryPath);
             return;
@@ -82,7 +84,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                     .filter(Files::isRegularFile)
                     .filter(this::isImageFile)
                     .forEach(imagePath -> {
-                        processImage(imagePath);
+                        processImage(imagePath, failLogName);
                         processed[0]++;
                         System.out.println("Progress: " + processed[0] + "/" + totalImages);
                     });
@@ -112,7 +114,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
         return IMAGE_EXTENSIONS.contains(extension);
     }
 
-    private void processImage(final Path imagePath) {
+    private void processImage(final Path imagePath, final String failLogName) {
         final long startTime = System.currentTimeMillis();
 
         try {
@@ -181,9 +183,34 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
-            e.printStackTrace();
-            // Continue processing other images even if one fails
+            writeFailedImageProcess(imagePath, failLogName, e);
+          // Continue processing other images even if one fails
         }
     }
-}
 
+  private void writeFailedImageProcess(final Path imagePath, final String failLogName, final Exception exception) {
+    try {
+      final Path logFile = Paths.get("data", failLogName);
+      final String fullPath = imagePath.toAbsolutePath().toString();
+      final String exceptionClass = exception.getClass().getName();
+      final String logEntry = "\"" + fullPath + "\", \"" + exceptionClass + "\"\n";
+
+      // Create a data directory if it doesn't exist
+      final Path dataDir = Paths.get("data");
+      if (!Files.exists(dataDir)) {
+        Files.createDirectories(dataDir);
+      }
+
+      // Append to a log file (create if it doesn't exist)
+      Files.writeString(
+          logFile,
+          logEntry,
+          StandardOpenOption.CREATE,
+          StandardOpenOption.APPEND
+      );
+    } catch (IOException e) {
+      // If we can't write to the log file, just print a warning
+      System.err.println("Warning: Failed to write to failed-image-processing.log: " + e.getMessage());
+    }
+  }
+}
