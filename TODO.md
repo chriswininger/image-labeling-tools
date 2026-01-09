@@ -32,3 +32,10 @@
 
 * Add a script that coppies the db and thumbnails from quarkus-cli-image-labeler into searchable-gallery X
 * Add a script that runs the image labeling for a specified directory and then runs the copy script
+
+## Problem images
+* works, but not seeing chickens:  java -jar ./build/quarkus-app/quarkus-run.jar generate-image-tags "/Users/chriswininger/Pictures/test-images/26-01-07 13-31-25 4020.jpg"
+* "/Users/chriswininger/Pictures/halloween-collage.png", "java.lang.RuntimeException"
+  "/Users/chriswininger/Pictures/test-images/25-12-18 08-13-56 3828.png", "com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest"
+  "/Users/chriswininger/Pictures/test-images/25-12-21 16-00-01 3840.jpg", "com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest"
+
