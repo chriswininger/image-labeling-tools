@@ -24,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoTitleModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
+import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageReadException;
+import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteException;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -82,14 +85,14 @@ public class ImageInfoService
     try {
       originalImage = ImageIO.read(Paths.get(imagePath).toFile());
     } catch (IOException ex) {
-      throw new RuntimeException("Could not read image file", ex);
+      throw new ImageReadException(imagePath, ex);
     }
 
     if (originalImage == null) {
-      throw new RuntimeException("Could not read image: " + imagePath);
+      throw new ImageReadException(imagePath, new NullPointerException("Null value returned from ImageIO.read"));
     }
 
-    final ImageContent imageContent = getImageContent(imagePath, originalImage);
+    final ImageContent imageContent = getImageContentAndResizeIt(originalImage, imagePath);
     final ImageInfo imageInfo = generateImageInfo(imageContent, imagePath);
 
     // Generate a thumbnail filename and add it to ImageInfo (the thumbnail its self has already been saved at this point
@@ -115,7 +118,7 @@ public class ImageInfoService
             resizeImage(originalImage, IMAGE_DIMENSION_FOR_THUMBNAIL), 0.85f);
       }
       catch (IOException e) {
-        throw new RuntimeException("Error Saving thumbnail: ", e);
+        throw new ImageWriteException("Error Saving thumbnail: ", e);
       }
 
       saveThumbnail(imagePath, imageBytesForThumbnail);
@@ -136,7 +139,7 @@ public class ImageInfoService
     while (numbTimesTried < NUM_MODEL_RETRIES) {
       if (numbTimesTried > 0) {
         System.out.println("Failed to get a valid result from the model for image: " + imagePath);
-        System.out.println("Trying again %s/%s".formatted(numbTimesTried, NUM_MODEL_RETRIES));
+        System.out.println("Trying again %s/%s".formatted(numbTimesTried + 1, NUM_MODEL_RETRIES));
       }
 
       final TextContent question = TextContent.from(PROMPT);
@@ -194,14 +197,14 @@ public class ImageInfoService
     }
 
     // if we got this far without returning a result it means we exhausted our retries
-    throw new RuntimeException("Could not generate Image Info after %s tries".formatted(NUM_MODEL_RETRIES));
+    throw new ExceededRetryLimitForModelRequest(
+        "Could not generate Image Info after %s tries".formatted(NUM_MODEL_RETRIES));
   }
 
-  private ImageContent getImageContent(final String imagePath, BufferedImage originalImage) {
+  // At this point we've already read the image, the only reason we are taking imagePath is for logging fileSize
+  // and including imagePath in the exception message
+  private ImageContent getImageContentAndResizeIt(BufferedImage originalImage, final String imagePath) {
     try {
-      // Get the original file size
-      final long originalFileSize = Files.size(Paths.get(imagePath));
-
       final int originalWidth = originalImage.getWidth();
       final int originalHeight = originalImage.getHeight();
 
@@ -210,12 +213,13 @@ public class ImageInfoService
       final int resizedWidth = resizedImage.getWidth();
       final int resizedHeight = resizedImage.getHeight();
 
-      // Convert resized image to JPEG with compression for smaller file size
+      // Convert a resized image to JPEG with compression for smaller file size
       // Always use JPEG to ensure good compression regardless of source format
       final byte[] imageBytes = imageToJpegBytes(resizedImage, 0.85f); // 85% quality
       final long resizedFileSize = imageBytes.length;
 
       // Log the resize information
+      final long originalFileSize = Files.size(Paths.get(imagePath));
       System.out.printf("Image resize: %dx%d (%.1f KB) -> %dx%d (%.1f KB)%n",
           originalWidth, originalHeight, originalFileSize / 1024.0,
           resizedWidth, resizedHeight, resizedFileSize / 1024.0);
