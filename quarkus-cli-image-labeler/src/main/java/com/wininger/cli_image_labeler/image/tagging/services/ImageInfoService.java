@@ -51,7 +51,13 @@ public class ImageInfoService
       * be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird.
       * If you can't tell what's in an image you can respond with something like this:
        {"tags": ["unknown"] , "description": "A blurry image possibly containing text." }
-
+    
+      REQUIRED JSON STRUCTURE (both fields must always be present):
+      {
+        "tags": ["tag1", "tag2"],
+        "fullDescription": "A details description of what you see"
+      }
+  
       Return a JSON object with the REQUIRED fields 'tags' (array of strings) and 'fullDescription' (string)
     """;
 
