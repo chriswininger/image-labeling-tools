@@ -22,6 +22,7 @@ import javax.imageio.stream.ImageOutputStream;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
+import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoIsTextModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoTitleModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
@@ -108,7 +109,7 @@ public class ImageInfoService
     // Deduplicate tags, convert to lowercase, sort alphabetically
     final List<String> deduplicatedTags = imageInfo.tags() != null
         ? new HashSet<>(
-            // conver to lowercase before de-duplicating
+            // convert to lowercase before de-duplicating
             imageInfo.tags().stream().map(String::toLowerCase).toList()
         ).stream()
           .filter(str  -> !str.isBlank())
@@ -165,25 +166,17 @@ public class ImageInfoService
             nonNull(modelResponse.fullDescription())) {
           System.out.println("token usage: " + chatResponse.tokenUsage());
 
-          // -- TEMP
-          final ChatModel chatModelTitle = OllamaChatModel.builder()
-              .modelName("gemma3:4b")
-              .baseUrl("http://localhost:11434/")
-              .build();
+          final String shortTitle = getShortTitle(modelResponse.fullDescription());
+          final Boolean isText = isText(imageContent);
 
-          final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
-              .chatModel(chatModelTitle)
-              .build();
-
-          final ImageInfoTitleModelResponse storyInfo = titleTx.extractTitle(modelResponse.fullDescription());
-          // -------
+          System.out.println("!!! isText: " + isText + "\n" + "For: '" + imagePath + "'");
 
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
               modelResponse.tags(),
               modelResponse.fullDescription(),
-              storyInfo.shortTitle(),
-              null,
+              shortTitle,
+              isText,
               null);
         } else {
           // Log which fields are missing
@@ -354,4 +347,37 @@ public class ImageInfoService
       return Math.abs(sanitized.hashCode()) + ".jpg";
     }
   }
+
+  // When I try to extract more than tags and description in a single prompt the quality of the tags and description
+  // degrades, so I'm splitting this into multiple passes
+  private String getShortTitle(final String fullDescription) {
+    final ChatModel chatModelTitle = OllamaChatModel.builder()
+        .modelName("gemma3:4b")
+        .baseUrl("http://localhost:11434/")
+        .build();
+
+    final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
+        .chatModel(chatModelTitle)
+        .build();
+
+    final ImageInfoTitleModelResponse titleInfo = titleTx.extractTitle(fullDescription);
+
+    return titleInfo.shortTitle();
+  }
+
+  private Boolean isText(final ImageContent imageContent) {
+    final ChatModel chatModelTitle = OllamaChatModel.builder()
+        .modelName("gemma3:4b")
+        .baseUrl("http://localhost:11434/")
+        .build();
+
+    final ImageInfoIsTextService titleTx = AiServices.builder(ImageInfoIsTextService.class)
+        .chatModel(chatModelTitle)
+        .build();
+
+    final ImageInfoIsTextModelResponse titleInfo = titleTx.determineIfIsText(imageContent);
+
+    return titleInfo.isText();
+  }
+
 }
