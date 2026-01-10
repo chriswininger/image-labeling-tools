@@ -26,6 +26,9 @@ import java.util.stream.Stream;
 
 import com.wininger.cli_image_labeler.image.tagging.db.TagEntity;
 
+import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.getTimeTakenMessage;
+import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.printImageInfoResults;
+
 @Command(name = "write-tags-to-local-db", mixinStandardHelpOptions = true)
 public class WriteTagsToLocalDbCommand implements Runnable {
     @Parameters(paramLabel = "<directory-path>", description = "The path to a directory containing images to process and save to database")
@@ -94,14 +97,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             throw new RuntimeException("Failed to process directory", e);
         }
 
-        final long totalTimeMs = System.currentTimeMillis() - startTime;
-        final double totalTimeSeconds = totalTimeMs / 1000.0D;
-        final long totalTimeMinutes = (long) Math.floor(totalTimeSeconds / 60.0D);
-        final long remainingSeconds = (long) (totalTimeSeconds % 60.0D);
-
-      System.out.printf("\n\nCompleted processing all images: %s minutes and %s seconds%n",
-          totalTimeMinutes, remainingSeconds);
-
+      System.out.printf("\n\nCompleted processing all images in: %s",
+          getTimeTakenMessage(startTime, System.currentTimeMillis()));
     }
 
     private boolean isImageFile(final Path path) {
@@ -144,8 +141,6 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 .map(tagRepository::upsertTag)
                 .collect(Collectors.toList());
 
-            final String tagsString = String.join(", ", imageInfo.tags());
-
             if (existing != null) {
                 // Update existing entry
                 existing.setDescription(imageInfo.fullDescription());
@@ -156,12 +151,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 final ImageInfoEntity updated = imageTagRepository.update(existing);
 
                 System.out.println("Updated database entry with ID: " + updated.getId());
-                System.out.println("Title: " + imageInfo.shortTitle());
-                System.out.println("Description: " + imageInfo.fullDescription());
-                System.out.println("Tags: " + tagsString);
-                System.out.println("isText: " + imageInfo.isText());
-                System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
-                System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
+                printImageInfoResults(imageInfo, startTime);
             } else {
                 // Save new entry to database
                 final ImageInfoEntity saved = imageTagRepository.save(
@@ -172,14 +162,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                     imageInfo.shortTitle(),
                     imageInfo.isText()
                 );
-
-                System.out.println("Saved to database with ID: " + saved.getId());
-                System.out.println("Title: " + imageInfo.shortTitle());
-                System.out.println("Description: " + imageInfo.fullDescription());
-                System.out.println("Tags: " + tagsString);
-                System.out.println("isText: " + imageInfo.isText());
-                System.out.println("Time Taken: " + (System.currentTimeMillis() - startTime) + " ms");
-                System.out.println("Time Taken: " + ((System.currentTimeMillis() - startTime)/1000) + " seconds");
+                printImageInfoResults(imageInfo, startTime);
             }
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());

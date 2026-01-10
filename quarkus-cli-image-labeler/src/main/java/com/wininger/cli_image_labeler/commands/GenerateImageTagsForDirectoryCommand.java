@@ -15,6 +15,9 @@ import java.nio.file.StandardOpenOption;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.getTimeTakenMessage;
+import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.printImageInfoResults;
+
 @Command(name = "generate-image-tags-for-directory", mixinStandardHelpOptions = true)
 public class GenerateImageTagsForDirectoryCommand implements Runnable {
     @Parameters(paramLabel = "<directory-path>", description = "The path to a directory containing images to process")
@@ -33,6 +36,8 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
 
     @Override
     public void run() {
+        final long startTime = System.currentTimeMillis();
+
         final Path directory = Paths.get(directoryPath);
 
         if (!Files.exists(directory)) {
@@ -54,6 +59,9 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
             System.err.println("Error walking directory: " + e.getMessage());
             throw new RuntimeException("Failed to process directory", e);
         }
+
+      System.out.printf("\n\nCompleted processing all images in: %s",
+          getTimeTakenMessage(startTime, System.currentTimeMillis()));
     }
 
     private boolean isImageFile(final Path path) {
@@ -68,9 +76,10 @@ public class GenerateImageTagsForDirectoryCommand implements Runnable {
 
     private void processImage(final Path imagePath) {
         try {
+            final long startTime = System.currentTimeMillis();
             System.out.println("\n=== Processing: " + imagePath + " ===");
             final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(imagePath.toString(), false);
-            System.out.println("Image Info: " + imageInfo);
+            printImageInfoResults(imageInfo, startTime);
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
             writeFailedImageProcess(imagePath, e);

@@ -6,4 +6,8 @@ import dev.langchain4j.model.output.structured.Description;
 // https://github.com/langchain4j/langchain4j/issues/938#issuecomment-2468159630
 public record ImageInfoIsTextModelResponse(
     @Description("True if the main focus of the image is text, false otherwise. REQUIRED field.")
-    Boolean isText) { }
+    Boolean isText
+    //@Description("Contains a transcription of the text seen in the image with simple plain text formatting, " +
+    //    "if isText is true, otherwise null")
+    //String textContents
+) { }

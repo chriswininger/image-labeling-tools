@@ -7,6 +7,8 @@ import jakarta.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
+import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.printImageInfoResults;
+
 @Command(name = "generate-image-tags", mixinStandardHelpOptions = true)
 public class GenerateImageTagsCommand implements Runnable {
     @Parameters(paramLabel = "<image-path>", description = "The path to an image you want to identify")
@@ -21,8 +23,10 @@ public class GenerateImageTagsCommand implements Runnable {
 
     @Override
     public void run() {
-        final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(imagePath, false);
+      final long startTime = System.currentTimeMillis();
 
-        System.out.println("Image Info: " + imageInfo);
+      final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(imagePath, false);
+
+      printImageInfoResults(imageInfo, startTime);
     }
 }

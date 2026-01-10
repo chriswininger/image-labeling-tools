@@ -13,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
@@ -45,6 +46,9 @@ import static java.util.Objects.nonNull;
 @ApplicationScoped
 public class ImageInfoService
 {
+  private static final String MULTI_MODAL_MODAL = "gemma3:4b";
+  private static final String OCR_MODEL = "deepseek-ocr:3b";
+
   private static final String PROMPT = """
       Generate an image description and tags based on this image.
 
@@ -78,7 +82,7 @@ public class ImageInfoService
         .build();
 
     model = OllamaChatModel.builder()
-        .modelName("gemma3:4b")
+        .modelName(MULTI_MODAL_MODAL)
         //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
         .baseUrl("http://localhost:11434/")
         .responseFormat(responseFormat)
@@ -168,8 +172,6 @@ public class ImageInfoService
 
           final String shortTitle = getShortTitle(modelResponse.fullDescription());
           final Boolean isText = isText(imageContent);
-
-          System.out.println("!!! isText: " + isText + "\n" + "For: '" + imagePath + "'");
 
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
@@ -352,7 +354,7 @@ public class ImageInfoService
   // degrades, so I'm splitting this into multiple passes
   private String getShortTitle(final String fullDescription) {
     final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName("gemma3:4b")
+        .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
         .build();
 
@@ -367,7 +369,7 @@ public class ImageInfoService
 
   private Boolean isText(final ImageContent imageContent) {
     final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName("gemma3:4b")
+        .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
         .build();
 
@@ -375,9 +377,30 @@ public class ImageInfoService
         .chatModel(chatModelTitle)
         .build();
 
-    final ImageInfoIsTextModelResponse titleInfo = titleTx.determineIfIsText(imageContent);
+    final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
+    final Boolean isText = textInfo.isText();
 
-    return titleInfo.isText();
+    if (Objects.equals(true, isText)) {
+      System.out.println("!!! OCR:\n\n" + doOCR(imageContent));
+    }
+
+    return isText;
+  }
+
+  // worked well on cli: `llama run deepseek-ocr '"/Users/chriswininger/Pictures/test-images/25-12-17 08-50-55 3819.png"\nExtract the text in the image.'`
+  private String doOCR(final ImageContent imageContent) {
+    final ChatModel modelOcr = OllamaChatModel.builder()
+        .modelName(MULTI_MODAL_MODAL)
+        .baseUrl("http://localhost:11434/")
+        .build();
+
+
+    final TextContent command = TextContent.from("\nExtract the text in the image.");
+    final UserMessage userMessage = UserMessage.from(imageContent, command);
+    final ChatResponse chatResponse = modelOcr.chat(userMessage);
+
+    // Parse the JSON response into ImageInfoModelResponse
+    return chatResponse.aiMessage().text();
   }
 
 }
