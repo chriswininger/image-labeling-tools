@@ -13,6 +13,9 @@ public class PrintUtils
     System.out.println("Description: " + imageInfo.fullDescription());
     System.out.println("Tags: " + tagsString);
     System.out.println("isText: " + imageInfo.isText());
+    if (imageInfo.isText()) {
+      System.out.println("textContent: " + imageInfo.textContents());
+    }
     System.out.println("Time Taken: " + getTimeTakenMessage(startTime, System.currentTimeMillis()));
   }
 

@@ -63,6 +63,13 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
         <div className="image-modal-body">
           <div className="image-modal-description">{image.description}</div>
 
+          {image.text_contents && (
+            <div className="image-modal-text-contents">
+              <div className="image-modal-text-contents-header">Extracted Text:</div>
+              <div className="image-modal-text-contents-body">{image.text_contents}</div>
+            </div>
+          )}
+
           {tags.length > 0 && (
             <div className="image-modal-tags">
               {tags.map((tag, index) => (

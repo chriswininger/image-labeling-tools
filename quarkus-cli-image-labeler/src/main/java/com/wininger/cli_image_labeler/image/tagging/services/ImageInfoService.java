@@ -49,6 +49,8 @@ public class ImageInfoService
   private static final String MULTI_MODAL_MODAL = "gemma3:4b";
   private static final String OCR_MODEL = "deepseek-ocr:3b";
 
+  private static final String TEXT_TAG = "text";
+
   private static final String PROMPT = """
       Generate an image description and tags based on this image.
 
@@ -174,6 +176,11 @@ public class ImageInfoService
           final String shortTitle = getShortTitle(modelResponse.fullDescription());
           final Boolean isText = isText(imageContent);
           final String textContents = isText ? doOCR(imageContent) : null;
+
+          if (isText && !modelResponse.tags().contains(TEXT_TAG)) {
+            // ensure it's in the labels
+            modelResponse.tags().add(TEXT_TAG);
+          }
 
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
@@ -381,15 +388,14 @@ public class ImageInfoService
         .build();
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
-    final Boolean isText = textInfo.isText();
 
-    return isText;
+    return textInfo.isText();
   }
 
   // worked well on cli: `llama run deepseek-ocr '"/Users/chriswininger/Pictures/test-images/25-12-17 08-50-55 3819.png"\nExtract the text in the image.'`
   private String doOCR(final ImageContent imageContent) {
     final ChatModel modelOcr = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
+        .modelName(OCR_MODEL)
         .baseUrl("http://localhost:11434/")
         .build();
 

@@ -144,6 +144,31 @@
   word-wrap: break-word;
 }
 
+.image-modal-text-contents {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-left: 3px solid #007bff;
+  border-radius: 4px;
+}
+
+.image-modal-text-contents-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.image-modal-text-contents-body {
+  font-size: 0.9375rem;
+  color: #333;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
 .image-modal-tags {
   display: flex;
   flex-wrap: wrap;
