@@ -16,17 +16,22 @@ public class ImageInfoRepository {
 
     @Transactional
     public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags) {
-        return save(fullPath, description, tags, null, null, null);
+        return save(fullPath, description, tags, null, null, null, null);
     }
 
     @Transactional
     public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName) {
-        return save(fullPath, description, tags, thumbnailName, null, null);
+        return save(fullPath, description, tags, thumbnailName, null, null, null);
     }
 
     @Transactional
     public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName, final String shortTitle, final Boolean isText) {
-        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText);
+        return save(fullPath, description, tags, thumbnailName, shortTitle, isText, null);
+    }
+
+    @Transactional
+    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName, final String shortTitle, final Boolean isText, final String textContents) {
+        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText, textContents);
         // ID will be generated in @PrePersist callback
         entityManager.persist(entity);
         return entity;

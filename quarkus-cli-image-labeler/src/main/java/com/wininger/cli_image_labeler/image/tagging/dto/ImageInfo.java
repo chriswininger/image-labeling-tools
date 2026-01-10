@@ -7,6 +7,7 @@ public record ImageInfo(
     String fullDescription,
     String shortTitle,
     Boolean isText,
+    String textContents,
 
     // not set by the model, set by us
     String thumbnailName

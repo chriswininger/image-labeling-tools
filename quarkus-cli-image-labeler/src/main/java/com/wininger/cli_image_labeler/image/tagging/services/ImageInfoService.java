@@ -140,6 +140,7 @@ public class ImageInfoService
         imageInfo.fullDescription(),
         imageInfo.shortTitle(),
         imageInfo.isText(),
+        imageInfo.textContents(),
         thumbnailName
     );
   }
@@ -172,6 +173,7 @@ public class ImageInfoService
 
           final String shortTitle = getShortTitle(modelResponse.fullDescription());
           final Boolean isText = isText(imageContent);
+          final String textContents = isText ? doOCR(imageContent) : null;
 
           // Convert to ImageInfo (without thumbnailName, which will be added later)
           return new ImageInfo(
@@ -179,6 +181,7 @@ public class ImageInfoService
               modelResponse.fullDescription(),
               shortTitle,
               isText,
+              textContents,
               null);
         } else {
           // Log which fields are missing
@@ -379,10 +382,6 @@ public class ImageInfoService
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
     final Boolean isText = textInfo.isText();
-
-    if (Objects.equals(true, isText)) {
-      System.out.println("!!! OCR:\n\n" + doOCR(imageContent));
-    }
 
     return isText;
   }
