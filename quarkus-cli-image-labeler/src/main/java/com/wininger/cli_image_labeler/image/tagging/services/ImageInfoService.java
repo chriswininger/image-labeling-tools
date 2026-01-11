@@ -22,10 +22,7 @@ import javax.imageio.stream.ImageOutputStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoIsTextModelResponse;
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoModelResponse;
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoTitleModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.dto.*;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageReadException;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteException;
@@ -190,6 +187,7 @@ public class ImageInfoService
           final String shortTitle = getShortTitle(modelResponse.fullDescription());
           final Boolean isText = isText(imageContent);
           final String textContents = isText ? doOCR(imageContent) : null;
+          tempTest(imageContent);
 
           if (isText && !modelResponse.tags().contains(TEXT_TAG)) {
             // ensure it's in the labels
@@ -420,6 +418,21 @@ public class ImageInfoService
 
     // Parse the JSON response into ImageInfoModelResponse
     return chatResponse.aiMessage().text();
+  }
+
+  private void tempTest(final ImageContent imageContent) {
+    final ChatModel chatModelTitle = OllamaChatModel.builder()
+        .modelName("gemma3:4b")
+        .baseUrl("http://localhost:11434/")
+        .build();
+
+    final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
+        .chatModel(chatModelTitle)
+        .build();
+
+    final InitialImageInfo info = titleTx.getImageInfo(imageContent);
+
+    System.out.println("!!! INFO Test: " + info);
   }
 
 }
