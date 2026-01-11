@@ -9,6 +9,7 @@ import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.service.AiServices;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import javax.imageio.IIOImage;
@@ -42,12 +43,70 @@ public class ImageInfoServiceTest {
     @Inject
     ImageInfoService imageInfoService;
 
+
+    @Test
+    void test_a_middle_aged_man_having_a_beer() throws IOException {
+        // description: A middle-aged man sits at an outdoor table, holding a dark beer glass. He is wearing a dark
+        //     t-shirt with a graphic design featuring insects. The table is surrounded by trees, creating a shaded outdoor setting.
+        // tags: person, table, beer, glasses, trees, outdoor, shadow, dark, tableware, outdoor scene
+        // InitialImageInfo[tags=[person, table, beer, trees, outdoor, drinks, tableware, shadow, summer, glasses, drinks], fullDescription=A man sits at an outdoor table, enjoying a beer. He is wearing a black shirt with a graphic design featuring insects. Trees surround the table, creating a shaded and natural setting. The overall impression is a relaxed and casual summer scene.]
+        runWithImage("24-10-13 14-43-43 2024.jpg");
+    }
+
+    @Test
+    void test_a_roaring_fire_pit() throws IOException {
+        // tags: [fire, fire pit, garden, flowers, plants, night, outdoor, evening, dark, fence, vegetation, garden, night, darkness]
+        // description: A dark outdoor scene featuring a fire pit with a burning fire and a decorative metal fence
+        //     surrounding it. The fence is surrounded by lush green plants and flowers in pots. There are dark trees
+        //     in the background, suggesting a nighttime setting. The scene is shrouded in darkness with only the fire
+        //     and the lights from the fire pit providing illumination.
+        runWithImage("24-10-12 19-44-41 7914.jpg");
+    }
+
+    @Test
+    void test__a_moulting_chicken() throws IOException {
+        // tags: [chicken, bird, animal, feathered, domestic fowl, farm animal, animal, bird, domestic]
+        // description: A single, striking chicken with black and white feathered plumage and a bright red comb, is
+        // standing on a patch of green grass. The chicken is positioned in the foreground, taking up a significant
+        // portion of the image. The background is blurred, suggesting a grassy field. The lighting appears to be natural.
+        runWithImage("24-10-29 09-02-52 8203.jpg");
+    }
+
+    @Test
+    void test__a_closeup_road_island_red_says_hello_to_the_camera() throws IOException {
+            // tags: [chicken, bird, animal, pet, domestic]
+            // description: A close-up image of a brown chicken with a red comb. The chicken is positioned in the
+            // foreground and appears to be looking directly at the camera. The background is blurred, suggesting a shallow depth of field.
+            runWithImage("24-12-04 15-22-46 8617.jpg");
+    }
+
+    @Test
+    void test__a_screenshot_from_a_book_discussing_distance_of_vectors() throws IOException {
+        // tags: [diagram, formula, math, mathematics, equation, symbols, vectors, linear algebra, NDArray, matrix]
+        // description: The image is a diagram related to linear algebra, specifically dealing with NDArrays and vectors.
+        // It showcases a mathematical equation represented using symbols and vectors, likely illustrating concepts from
+        // linear algebra.
+        runWithImage("25-12-17 08-38-20 3818.png");
+    }
+
+    @Test
+    void test__a_screenshot_from_a_book_discussing_vector_stores() throws IOException {
+        // !!! WRONG
+        // tags: [chicken, rooster, farm, barn, animals, outdoor, rural, agriculture, domestic, male]
+        //description: A photograph depicts a brown rooster standing prominently in front of a red barn. The rooster is
+        // facing the camera, displaying its comb and wattles. The barn is a traditional wooden structure with a red roof.
+        // The scene suggests a rural farm setting with livestock and agricultural activity.
+        // Several chickens are visible in the background, adding to the farmyard atmosphere.
+        runWithImage("25-12-17 08-50-55 3819.png");
+    }
+
     /**
      * Test processing of image "24-10-13 14-43-43 2024.jpg".
      *
      * This test currently just prints the output to help establish baseline
      * expectations for future similarity-based assertions.
      */
+    @Disabled
     @Test
     void testProcessImage_24_10_13_14_43_43_2024() {
         // version I like: !!! INFO Test: InitialImageInfo[tags=[person, table, beer, trees, outdoor, drinks, tableware, shadow, summer, glasses, drinks], fullDescription=A man sits at an outdoor table, enjoying a beer. He is wearing a black shirt with a graphic design featuring insects. Trees surround the table, creating a shaded and natural setting. The overall impression is a relaxed and casual summer scene.]
@@ -105,9 +164,8 @@ public class ImageInfoServiceTest {
         assert result.fullDescription() != null : "Description should not be null";
     }
 
-    @Test
-    void test_newApproach() throws IOException {
-        final Path testImagePath = Paths.get("src/test/resources/test-images/24-10-13 14-43-43 2024.jpg")
+    private InitialImageInfo runWithImage(final String imageName) throws IOException {
+        final Path testImagePath = Paths.get("src/test/resources/test-images/%s".formatted(imageName))
             .toAbsolutePath();
 
         final var originalImage = ImageIO.read(Paths.get(testImagePath.toString()).toFile());
@@ -126,7 +184,12 @@ public class ImageInfoServiceTest {
 
         final InitialImageInfo info = titleTx.getImageInfo(imageContent);
 
-        System.out.println(info);
+        System.out.printf("== %s ==%n", imageName);
+        System.out.println("tags: " + info.tags());
+        System.out.println("description: " + info.fullDescription());
+        System.out.println("========");
+
+        return info;
     }
 
     private ImageContent getImageContentAndResizeIt(BufferedImage originalImage, final String imagePath) {
