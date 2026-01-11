@@ -31,6 +31,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
+import java.util.List;
 
 /**
  * Integration tests for ImageInfoService.
@@ -52,7 +53,7 @@ public class ImageInfoServiceTest {
 
     private static final String EMBEDDING_MODEL = "nomic-embed-text";
     private static final String OLLAMA_BASE_URL = "http://localhost:11434/";
-    private static final double SIMILARITY_THRESHOLD = 0.75;
+    private static final double SIMILARITY_THRESHOLD = 0.80;
 
     @Test
     void test_a_middle_aged_man_having_a_beer() throws IOException {
@@ -61,19 +62,13 @@ public class ImageInfoServiceTest {
             "t-shirt with a graphic design featuring insects. The table is surrounded by trees, creating " +
             "a shaded outdoor setting.";
 
-        // tags: person, table, beer, glasses, trees, outdoor, shadow, dark, tableware, outdoor scene
+        final List<String> expectedTags = List.of(
+            "person", "table", "beer", "glasses", "trees", "outdoor", "shadow", "dark", "tableware", "outdoor scene"
+        );
+
         final InitialImageInfo result = runWithImage("24-10-13 14-43-43 2024.jpg");
 
-        // Check semantic similarity of description
-        final double descriptionSimilarity = calculateSimilarity(expectedDescription, result.fullDescription());
-
-        System.out.println("\n--- Similarity Results ---");
-        System.out.println("Description similarity: " + descriptionSimilarity);
-        System.out.println("Threshold: " + SIMILARITY_THRESHOLD);
-
-        assertTrue(descriptionSimilarity >= SIMILARITY_THRESHOLD,
-            String.format("Description similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
-                descriptionSimilarity, SIMILARITY_THRESHOLD, expectedDescription, result.fullDescription()));
+        assertSimilarity(expectedDescription, expectedTags, result);
     }
 
     @Test
@@ -265,4 +260,42 @@ public class ImageInfoServiceTest {
         return CosineSimilarity.between(embedding1, embedding2);
     }
 
+    /**
+     * Calculates cosine similarity between two lists of tags.
+     * Joins tags into comma-separated strings and compares their semantic embeddings.
+     */
+    private double calculateTagsSimilarity(final List<String> expectedTags, final List<String> actualTags) {
+        final String expectedTagsStr = String.join(", ", expectedTags);
+        final String actualTagsStr = String.join(", ", actualTags);
+        return calculateSimilarity(expectedTagsStr, actualTagsStr);
+    }
+
+    private void assertSimilarity(
+        final String expectedDescription,
+        final List<String> expectedTags,
+        final InitialImageInfo result
+    ) {
+        // Check semantic similarity of description
+        final double descriptionSimilarity = calculateSimilarity(expectedDescription, result.fullDescription());
+
+        // Check semantic similarity of tags
+        final double tagsSimilarity = calculateTagsSimilarity(expectedTags, result.tags());
+
+        printSimilarityResults(descriptionSimilarity, tagsSimilarity);
+
+        assertTrue(descriptionSimilarity >= SIMILARITY_THRESHOLD,
+            String.format("Description similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                descriptionSimilarity, SIMILARITY_THRESHOLD, expectedDescription, result.fullDescription()));
+
+        assertTrue(tagsSimilarity >= SIMILARITY_THRESHOLD,
+            String.format("Tags similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                tagsSimilarity, SIMILARITY_THRESHOLD, expectedTags, result.tags()));
+    }
+
+    private void printSimilarityResults(final double descriptionSimilarity, final double tagsSimilarity) {
+        System.out.println("\n--- Similarity Results ---");
+        System.out.println("Description similarity: " + descriptionSimilarity);
+        System.out.println("Tags similarity: " + tagsSimilarity);
+        System.out.println("Threshold: " + SIMILARITY_THRESHOLD);
+    }
 }
