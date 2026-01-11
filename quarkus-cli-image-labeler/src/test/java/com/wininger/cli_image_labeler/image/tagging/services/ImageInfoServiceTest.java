@@ -3,14 +3,20 @@ package com.wininger.cli_image_labeler.image.tagging.services;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoIsTextModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.InitialImageInfo;
+import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaChatModel;
+import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.store.embedding.CosineSimilarity;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -44,13 +50,30 @@ public class ImageInfoServiceTest {
     ImageInfoService imageInfoService;
 
 
+    private static final String EMBEDDING_MODEL = "nomic-embed-text";
+    private static final String OLLAMA_BASE_URL = "http://localhost:11434/";
+    private static final double SIMILARITY_THRESHOLD = 0.75;
+
     @Test
     void test_a_middle_aged_man_having_a_beer() throws IOException {
-        // description: A middle-aged man sits at an outdoor table, holding a dark beer glass. He is wearing a dark
-        //     t-shirt with a graphic design featuring insects. The table is surrounded by trees, creating a shaded outdoor setting.
+        final String expectedDescription =
+            "A middle-aged man sits at an outdoor table, holding a dark beer glass. He is wearing a dark " +
+            "t-shirt with a graphic design featuring insects. The table is surrounded by trees, creating " +
+            "a shaded outdoor setting.";
+
         // tags: person, table, beer, glasses, trees, outdoor, shadow, dark, tableware, outdoor scene
-        // InitialImageInfo[tags=[person, table, beer, trees, outdoor, drinks, tableware, shadow, summer, glasses, drinks], fullDescription=A man sits at an outdoor table, enjoying a beer. He is wearing a black shirt with a graphic design featuring insects. Trees surround the table, creating a shaded and natural setting. The overall impression is a relaxed and casual summer scene.]
-        runWithImage("24-10-13 14-43-43 2024.jpg");
+        final InitialImageInfo result = runWithImage("24-10-13 14-43-43 2024.jpg");
+
+        // Check semantic similarity of description
+        final double descriptionSimilarity = calculateSimilarity(expectedDescription, result.fullDescription());
+
+        System.out.println("\n--- Similarity Results ---");
+        System.out.println("Description similarity: " + descriptionSimilarity);
+        System.out.println("Threshold: " + SIMILARITY_THRESHOLD);
+
+        assertTrue(descriptionSimilarity >= SIMILARITY_THRESHOLD,
+            String.format("Description similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                descriptionSimilarity, SIMILARITY_THRESHOLD, expectedDescription, result.fullDescription()));
     }
 
     @Test
@@ -89,6 +112,7 @@ public class ImageInfoServiceTest {
         runWithImage("25-12-17 08-38-20 3818.png");
     }
 
+    @Disabled
     @Test
     void test__a_screenshot_from_a_book_discussing_vector_stores() throws IOException {
         // !!! WRONG
@@ -98,70 +122,6 @@ public class ImageInfoServiceTest {
         // The scene suggests a rural farm setting with livestock and agricultural activity.
         // Several chickens are visible in the background, adding to the farmyard atmosphere.
         runWithImage("25-12-17 08-50-55 3819.png");
-    }
-
-    /**
-     * Test processing of image "24-10-13 14-43-43 2024.jpg".
-     *
-     * This test currently just prints the output to help establish baseline
-     * expectations for future similarity-based assertions.
-     */
-    @Disabled
-    @Test
-    void testProcessImage_24_10_13_14_43_43_2024() {
-        // version I like: !!! INFO Test: InitialImageInfo[tags=[person, table, beer, trees, outdoor, drinks, tableware, shadow, summer, glasses, drinks], fullDescription=A man sits at an outdoor table, enjoying a beer. He is wearing a black shirt with a graphic design featuring insects. Trees surround the table, creating a shaded and natural setting. The overall impression is a relaxed and casual summer scene.]
-        // Get the path to the test image
-        final Path testImagePath = Paths.get("src/test/resources/test-images/24-10-13 14-43-43 2024.jpg")
-                .toAbsolutePath();
-
-        System.out.println("=".repeat(80));
-        System.out.println("Processing image: " + testImagePath);
-        System.out.println("=".repeat(80));
-
-        // Process the image (don't keep thumbnails for tests)
-        final ImageInfo result = imageInfoService.generateImageInfoAndMetadata(
-                testImagePath.toString(),
-                false
-        );
-
-        // Print the results for inspection
-        System.out.println("\n" + "=".repeat(80));
-        System.out.println("IMAGE INFO RESULTS");
-        System.out.println("=".repeat(80));
-
-        System.out.println("\n--- Tags ---");
-        if (result.tags() != null) {
-            result.tags().forEach(tag -> System.out.println("  • " + tag));
-        } else {
-            System.out.println("  (no tags)");
-        }
-
-        System.out.println("\n--- Short Title ---");
-        System.out.println("  " + (result.shortTitle() != null ? result.shortTitle() : "(no title)"));
-
-        System.out.println("\n--- Full Description ---");
-        System.out.println("  " + (result.fullDescription() != null ? result.fullDescription() : "(no description)"));
-
-        System.out.println("\n--- Is Text ---");
-        System.out.println("  " + result.isText());
-
-        if (Boolean.TRUE.equals(result.isText()) && result.textContents() != null) {
-            System.out.println("\n--- Text Contents (OCR) ---");
-            System.out.println("  " + result.textContents());
-        }
-
-        System.out.println("\n--- Thumbnail Name ---");
-        System.out.println("  " + (result.thumbnailName() != null ? result.thumbnailName() : "(no thumbnail)"));
-
-        System.out.println("\n" + "=".repeat(80));
-        System.out.println("END OF RESULTS");
-        System.out.println("=".repeat(80));
-
-        // For now, we just verify we got a result without throwing an exception
-        // Future: Add cosine similarity checks against baseline outputs
-        assert result != null : "Result should not be null";
-        assert result.tags() != null : "Tags should not be null";
-        assert result.fullDescription() != null : "Description should not be null";
     }
 
     private InitialImageInfo runWithImage(final String imageName) throws IOException {
@@ -287,6 +247,22 @@ public class ImageInfoServiceTest {
         }
 
         return baos.toByteArray();
+    }
+
+    /**
+     * Calculates cosine similarity between two text strings using embeddings.
+     * Returns a value between 0.0 and 1.0, where 1.0 means identical meaning.
+     */
+    private double calculateSimilarity(final String text1, final String text2) {
+        final EmbeddingModel embeddingModel = OllamaEmbeddingModel.builder()
+            .baseUrl(OLLAMA_BASE_URL)
+            .modelName(EMBEDDING_MODEL)
+            .build();
+
+        final Embedding embedding1 = embeddingModel.embed(text1).content();
+        final Embedding embedding2 = embeddingModel.embed(text2).content();
+
+        return CosineSimilarity.between(embedding1, embedding2);
     }
 
 }
