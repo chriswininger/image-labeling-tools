@@ -75,7 +75,7 @@ public class ImageInfoService
 
   private static final int IMAGE_DIMENSION_FOR_THUMBNAIL = 500;
 
-  private final OllamaChatModel model;
+  private OllamaChatModel model;
 
   public ImageInfoService() {
     final var responseFormat = ResponseFormat.builder()
@@ -92,6 +92,20 @@ public class ImageInfoService
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
+    // == TEMP TEST ==
+    final var responseFormat = ResponseFormat.builder()
+        .type(ResponseFormatType.JSON)
+        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoModelResponse.class).get())
+        .build();
+
+    model = OllamaChatModel.builder()
+        .modelName(MULTI_MODAL_MODAL)
+        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
+        .baseUrl("http://localhost:11434/")
+        .responseFormat(responseFormat)
+        .build();
+    // == TEMP TEST ==
+
     // Load and resize the image
     final BufferedImage originalImage;
 
