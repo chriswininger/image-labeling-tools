@@ -185,6 +185,7 @@ public class ImageInfoServiceTest {
         final InitialImageInfo info = titleTx.getImageInfo(imageContent);
 
         System.out.printf("== %s ==%n", imageName);
+        // System.out.println("title: " + info.title());
         System.out.println("tags: " + info.tags());
         System.out.println("description: " + info.fullDescription());
         System.out.println("========");
