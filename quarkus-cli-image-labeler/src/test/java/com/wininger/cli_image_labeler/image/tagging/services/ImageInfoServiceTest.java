@@ -73,38 +73,66 @@ public class ImageInfoServiceTest {
 
     @Test
     void test_a_roaring_fire_pit() throws IOException {
-        // tags: [fire, fire pit, garden, flowers, plants, night, outdoor, evening, dark, fence, vegetation, garden, night, darkness]
-        // description: A dark outdoor scene featuring a fire pit with a burning fire and a decorative metal fence
-        //     surrounding it. The fence is surrounded by lush green plants and flowers in pots. There are dark trees
-        //     in the background, suggesting a nighttime setting. The scene is shrouded in darkness with only the fire
-        //     and the lights from the fire pit providing illumination.
-        runWithImage("24-10-12 19-44-41 7914.jpg");
+        final String expectedDescription =
+            "A dark outdoor scene featuring a fire pit with a burning fire and a decorative metal fence " +
+            "surrounding it. The fence is surrounded by lush green plants and flowers in pots. There are dark trees " +
+            "in the background, suggesting a nighttime setting. The scene is shrouded in darkness with only the fire " +
+            "and the lights from the fire pit providing illumination.";
+
+        final List<String> expectedTags = List.of(
+            "fire", "fire pit", "garden", "flowers", "plants", "night", "outdoor", "evening", "dark", "fence", "vegetation", "darkness"
+        );
+
+        final InitialImageInfo result = runWithImage("24-10-12 19-44-41 7914.jpg");
+
+        assertSimilarity(expectedDescription, expectedTags, result);
     }
 
     @Test
     void test__a_moulting_chicken() throws IOException {
-        // tags: [chicken, bird, animal, feathered, domestic fowl, farm animal, animal, bird, domestic]
-        // description: A single, striking chicken with black and white feathered plumage and a bright red comb, is
-        // standing on a patch of green grass. The chicken is positioned in the foreground, taking up a significant
-        // portion of the image. The background is blurred, suggesting a grassy field. The lighting appears to be natural.
-        runWithImage("24-10-29 09-02-52 8203.jpg");
+        final String expectedDescription =
+            "A single, striking chicken with black and white feathered plumage and a bright red comb, is " +
+            "standing on a patch of green grass. The chicken is positioned in the foreground, taking up a significant " +
+            "portion of the image. The background is blurred, suggesting a grassy field. The lighting appears to be natural.";
+
+        final List<String> expectedTags = List.of(
+            "chicken", "bird", "animal", "feathered", "domestic fowl", "farm animal", "domestic"
+        );
+
+        final InitialImageInfo result = runWithImage("24-10-29 09-02-52 8203.jpg");
+
+        assertSimilarity(expectedDescription, expectedTags, result);
     }
 
     @Test
     void test__a_closeup_road_island_red_says_hello_to_the_camera() throws IOException {
-            // tags: [chicken, bird, animal, pet, domestic]
-            // description: A close-up image of a brown chicken with a red comb. The chicken is positioned in the
-            // foreground and appears to be looking directly at the camera. The background is blurred, suggesting a shallow depth of field.
-            runWithImage("24-12-04 15-22-46 8617.jpg");
+        final String expectedDescription =
+            "A close-up image of a brown chicken with a red comb. The chicken is positioned in the " +
+            "foreground and appears to be looking directly at the camera. The background is blurred, suggesting a shallow depth of field.";
+
+        final List<String> expectedTags = List.of(
+            "chicken", "bird", "animal", "pet", "domestic"
+        );
+
+        final InitialImageInfo result = runWithImage("24-12-04 15-22-46 8617.jpg");
+
+        assertSimilarity(expectedDescription, expectedTags, result);
     }
 
     @Test
     void test__a_screenshot_from_a_book_discussing_distance_of_vectors() throws IOException {
-        // tags: [diagram, formula, math, mathematics, equation, symbols, vectors, linear algebra, NDArray, matrix]
-        // description: The image is a diagram related to linear algebra, specifically dealing with NDArrays and vectors.
-        // It showcases a mathematical equation represented using symbols and vectors, likely illustrating concepts from
-        // linear algebra.
-        runWithImage("25-12-17 08-38-20 3818.png");
+        final String expectedDescription =
+            "The image is a diagram related to linear algebra, specifically dealing with NDArrays and vectors. " +
+            "It showcases a mathematical equation represented using symbols and vectors, likely illustrating concepts from " +
+            "linear algebra.";
+
+        final List<String> expectedTags = List.of(
+            "diagram", "formula", "math", "mathematics", "equation", "symbols", "vectors", "linear algebra", "NDArray", "matrix"
+        );
+
+        final InitialImageInfo result = runWithImage("25-12-17 08-38-20 3818.png");
+
+        assertSimilarity(expectedDescription, expectedTags, result);
     }
 
     @Disabled
