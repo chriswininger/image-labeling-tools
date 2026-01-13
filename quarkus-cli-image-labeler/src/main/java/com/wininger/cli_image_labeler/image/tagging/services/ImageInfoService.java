@@ -1,28 +1,19 @@
 package com.wininger.cli_image_labeler.image.tagging.services;
 
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wininger.cli_image_labeler.image.tagging.dto.*;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoIsTextModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTagsAndDescriptionModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTitleModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageReadException;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteException;
@@ -38,6 +29,7 @@ import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.output.JsonSchemas;
 import jakarta.enterprise.context.ApplicationScoped;
 
+import static com.wininger.cli_image_labeler.image.tagging.utils.ImageUtils.*;
 import static java.util.Objects.nonNull;
 
 @ApplicationScoped
@@ -48,23 +40,6 @@ public class ImageInfoService
 
   private static final String TEXT_TAG = "text";
 
-  private static final String PROMPT = """
-      Generate an image description and tags based on this image.
-
-      * You are a bot that tags images. You can create your own tags based on what you see but,
-      * be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird.
-      * If you can't tell what's in an image you can respond with something like this:
-       {"tags": ["unknown"] , "description": "A blurry image possibly containing text." }
-    
-      REQUIRED JSON STRUCTURE (both fields must always be present):
-      {
-        "tags": ["tag1", "tag2"],
-        "fullDescription": "A details description of what you see"
-      }
-  
-      Return a JSON object with the REQUIRED fields 'tags' (array of strings) and 'fullDescription' (string)
-    """;
-
   private static final Integer NUM_MODEL_RETRIES = 5;
 
   // Maximum dimension (width or height) for resized images to avoid timeouts
@@ -72,37 +47,17 @@ public class ImageInfoService
 
   private static final int IMAGE_DIMENSION_FOR_THUMBNAIL = 500;
 
-  private OllamaChatModel model;
+  private final OllamaChatModel multiModalModel;
 
   public ImageInfoService() {
-    final var responseFormat = ResponseFormat.builder()
-        .type(ResponseFormatType.JSON)
-        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoModelResponse.class).get())
-        .build();
-
-    model = OllamaChatModel.builder()
+    multiModalModel = OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
         //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
         .baseUrl("http://localhost:11434/")
-        .responseFormat(responseFormat)
         .build();
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
-    // == TEMP TEST ==
-    final var responseFormat = ResponseFormat.builder()
-        .type(ResponseFormatType.JSON)
-        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoModelResponse.class).get())
-        .build();
-
-    model = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
-        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
-        .baseUrl("http://localhost:11434/")
-        .responseFormat(responseFormat)
-        .build();
-    // == TEMP TEST ==
-
     // Load and resize the image
     final BufferedImage originalImage;
 
@@ -164,55 +119,44 @@ public class ImageInfoService
     while (numbTimesTried < NUM_MODEL_RETRIES) {
       if (numbTimesTried > 0) {
         System.out.println("Failed to get a valid result from the model for image: " + imagePath);
-        System.out.println("Trying again %s/%s".formatted(numbTimesTried + 1, NUM_MODEL_RETRIES));
+        System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
       }
 
-      final TextContent question = TextContent.from(PROMPT);
-      final UserMessage userMessage = UserMessage.from(question, imageContent);
-      final ChatResponse chatResponse = model.chat(userMessage);
+      final ImageInfoTagsAndDescriptionModelResponse tagsAndDescription = getTagsAndDescription(imageContent);
 
-      // Parse the JSON response into ImageInfoModelResponse
-      final String jsonResponse = chatResponse.aiMessage().text();
-      final ObjectMapper mapper = new ObjectMapper();
+      // Validate all required fields are present
+      if (nonNull(tagsAndDescription.tags()) &&
+          nonNull(tagsAndDescription.fullDescription())) {
 
-      final ImageInfoModelResponse modelResponse;
-      try {
-        modelResponse = mapper.readValue(jsonResponse, ImageInfoModelResponse.class);
+        final String shortTitle = getShortTitle(tagsAndDescription.fullDescription());
+        final Boolean isText = isText(imageContent);
 
-        // Validate all required fields are present
-        if (nonNull(modelResponse.tags()) &&
-            nonNull(modelResponse.fullDescription())) {
-          System.out.println("token usage: " + chatResponse.tokenUsage());
+        // TODO Skip OCR for now
+        // final String textContents = isText ? doOCR(imageContent) : null;
+        final String textContents = null;
 
-          final String shortTitle = getShortTitle(modelResponse.fullDescription());
-          final Boolean isText = isText(imageContent);
-          final String textContents = isText ? doOCR(imageContent) : null;
-
-          if (isText && !modelResponse.tags().contains(TEXT_TAG)) {
-            // ensure it's in the labels
-            modelResponse.tags().add(TEXT_TAG);
-          }
-
-          // Convert to ImageInfo (without thumbnailName, which will be added later)
-          return new ImageInfo(
-              modelResponse.tags(),
-              modelResponse.fullDescription(),
-              shortTitle,
-              isText,
-              textContents,
-              null);
-        } else {
-          // Log which fields are missing
-          System.out.println("Missing required fields in model response for image: " + chatResponse.aiMessage().text());
-          System.out.println("token usage: " + chatResponse.tokenUsage());
+        if (isText && !tagsAndDescription.tags().contains(TEXT_TAG)) {
+          // ensure it's in the labels
+          tagsAndDescription.tags().add(TEXT_TAG);
         }
+
+        // Convert to ImageInfo (without thumbnailName, which will be added later)
+        return new ImageInfo(
+            tagsAndDescription.tags(),
+            tagsAndDescription.fullDescription(),
+            shortTitle,
+            isText,
+            textContents,
+            null);
+      } else {
+        // To see the actual prompts and model responses you can add this to application.properties
+        // quarkus.log.category."dev.langchain4j".level=DEBUG
+        System.out.println("Missing required fields in model response for image");
+
+        // TODO: Figure out if there's a way to log this with Services
+        // System.out.println("token usage: " + chatResponse.tokenUsage());
       }
-      catch (JsonProcessingException e) {
-        // JSON parsing failed - log the error and raw response for debugging
-        System.out.println("Error parsing JSON response from model for image: " + imagePath);
-        System.out.println("Error: " + e.getMessage());
-        System.out.println("Raw response: " + jsonResponse);
-      }
+
 
       // we did not return a result, increment and decide if we should try again
       numbTimesTried++;
@@ -258,74 +202,6 @@ public class ImageInfoService
   }
 
   /**
-   * Resizes an image to fit within the maximum dimension while maintaining aspect ratio. If the image is already
-   * smaller, returns the original.
-   */
-  private BufferedImage resizeImage(final BufferedImage originalImage, final int maxDimension) {
-    final int originalWidth = originalImage.getWidth();
-    final int originalHeight = originalImage.getHeight();
-
-    // If image is already smaller than max dimension, return original
-    if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
-      return originalImage;
-    }
-
-    // Calculate new dimensions maintaining aspect ratio
-    final double scale = Math.min(
-        (double) maxDimension / originalWidth,
-        (double) maxDimension / originalHeight
-    );
-
-    final int newWidth = (int) (originalWidth * scale);
-    final int newHeight = (int) (originalHeight * scale);
-
-    // Create resized image with better quality rendering
-    final BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-
-    final Graphics2D g2d = resizedImage.createGraphics();
-    try {
-      // Use high-quality rendering hints
-      g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-      g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-      g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-      g2d.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
-    }
-    finally {
-      g2d.dispose();
-    }
-
-    return resizedImage;
-  }
-
-  /**
-   * Converts a BufferedImage to a JPEG byte array with specified quality. This ensures good compression regardless of
-   * source format.
-   */
-  private byte[] imageToJpegBytes(final BufferedImage image, final float quality) throws IOException {
-    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-    // Get JPEG writer
-    final ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
-    final ImageWriteParam param = writer.getDefaultWriteParam();
-
-    // Enable compression
-    if (param.canWriteCompressed()) {
-      param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-      param.setCompressionQuality(quality);
-    }
-
-    try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
-      writer.setOutput(ios);
-      writer.write(null, new IIOImage(image, null, null), param);
-    }
-    finally {
-      writer.dispose();
-    }
-
-    return baos.toByteArray();
-  }
-
-  /**
    * Saves the thumbnail image to the data/thumbnails directory. Uses a hash of the original image path to generate a
    * unique filename.
    */
@@ -343,44 +219,11 @@ public class ImageInfoService
     }
   }
 
-  /**
-   * Generates a unique filename for a thumbnail based on the original image path. Uses SHA-256 hash of the absolute
-   * path to ensure uniqueness. Returns just the filename (not the full path).
-   */
-  private String generateThumbnailFilename(final String imagePath) {
-    try {
-      final MessageDigest digest = MessageDigest.getInstance("SHA-256");
-      final byte[] hash = digest.digest(Paths.get(imagePath).toAbsolutePath().toString().getBytes());
-
-      // Convert hash to hex string
-      final StringBuilder hexString = new StringBuilder();
-      for (byte b : hash) {
-        final String hex = Integer.toHexString(0xff & b);
-        if (hex.length() == 1) {
-          hexString.append('0');
-        }
-        hexString.append(hex);
-      }
-
-      return hexString.toString() + ".jpg";
-    }
-    catch (NoSuchAlgorithmException e) {
-      // Fallback to a simpler approach if SHA-256 is not available (should never happen)
-      final String sanitized = imagePath.replaceAll("[^a-zA-Z0-9]", "_");
-      return Math.abs(sanitized.hashCode()) + ".jpg";
-    }
-  }
-
   // When I try to extract more than tags and description in a single prompt the quality of the tags and description
   // degrades, so I'm splitting this into multiple passes
   private String getShortTitle(final String fullDescription) {
-    final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
-        .baseUrl("http://localhost:11434/")
-        .build();
-
     final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
-        .chatModel(chatModelTitle)
+        .chatModel(multiModalModel)
         .build();
 
     final ImageInfoTitleModelResponse titleInfo = titleTx.extractTitle(fullDescription);
@@ -398,8 +241,9 @@ public class ImageInfoService
         .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
         .responseFormat(responseFormat)
-        .logRequests(true)
-        .logResponses(true)
+        .logRequests(true) // turn on to see full logging
+        .logResponses(true) // turn on to see full logging
+        .temperature(0.8D)
         .build();
 
     final ImageInfoIsTextService titleTx = AiServices.builder(ImageInfoIsTextService.class)
@@ -408,19 +252,18 @@ public class ImageInfoService
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
 
-    System.out.println("!!! reasoning: " + textInfo.reason());
+    // TODO: this should be a debug log, or threaded into final output
+    System.out.println("text reasoning: " + textInfo.reason());
+
     return textInfo.isText();
   }
 
-  public InitialImageInfo getTagsAndDescription(final ImageContent imageContent) {
-    final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
-        .baseUrl("http://localhost:11434/")
+  public ImageInfoTagsAndDescriptionModelResponse getTagsAndDescription(final ImageContent imageContent) {
+    final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
+        .chatModel(multiModalModel)
         .build();
 
-    final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
-        .chatModel(chatModelTitle)
-        .build();
+    //System.out.println("token usage: " + chatResponse.tokenUsage());
 
     return titleTx.getImageInfo(imageContent);
   }

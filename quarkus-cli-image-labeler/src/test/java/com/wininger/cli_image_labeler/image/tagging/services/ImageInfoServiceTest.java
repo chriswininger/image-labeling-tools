@@ -1,36 +1,18 @@
 package com.wininger.cli_image_labeler.image.tagging.services;
 
 import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoIsTextModelResponse;
-import com.wininger.cli_image_labeler.image.tagging.dto.InitialImageInfo;
 import dev.langchain4j.data.embedding.Embedding;
-import dev.langchain4j.data.message.ImageContent;
-import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
-import dev.langchain4j.service.AiServices;
 import dev.langchain4j.store.embedding.CosineSimilarity;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.ImageOutputStream;
-import java.awt.*;
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -50,7 +32,6 @@ public class ImageInfoServiceTest {
     @Inject
     ImageInfoService imageInfoService;
 
-
     private static final String EMBEDDING_MODEL = "nomic-embed-text";
     private static final String OLLAMA_BASE_URL = "http://localhost:11434/";
     private static final double SIMILARITY_THRESHOLD_MODERATE = 0.75;
@@ -67,7 +48,9 @@ public class ImageInfoServiceTest {
             "person", "table", "beer", "glasses", "trees", "outdoor", "shadow", "dark", "tableware", "outdoor scene"
         );
 
-        final var result = runWithImage("24-10-13 14-43-43 2024.jpg");
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("24-10-13 14-43-43 2024.jpg"),
+            false);
 
         assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
         assert(result.isText()).equals(false);
@@ -85,7 +68,9 @@ public class ImageInfoServiceTest {
             "fire", "fire pit", "garden", "flowers", "plants", "night", "outdoor", "evening", "dark", "fence", "vegetation", "darkness"
         );
 
-        final var result = runWithImage("24-10-12 19-44-41 7914.jpg");
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("24-10-12 19-44-41 7914.jpg"),
+            false);
 
         assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
         assert(result.isText()).equals(false);
@@ -102,7 +87,9 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "feathered", "domestic fowl", "farm animal", "domestic"
         );
 
-        final var result = runWithImage("24-10-29 09-02-52 8203.jpg");
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("24-10-29 09-02-52 8203.jpg"),
+        false);
 
         assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
         assert(result.isText()).equals(false);
@@ -118,7 +105,9 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "pet", "domestic"
         );
 
-        final var result = runWithImage("24-12-04 15-22-46 8617.jpg");
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("24-12-04 15-22-46 8617.jpg"),
+            false);
 
         assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
         assert(result.isText()).equals(false);
@@ -136,7 +125,9 @@ public class ImageInfoServiceTest {
             "code", "programming", "algorithm", "java", "mathematics", "documentation"
         );
 
-        final var result = runWithImage("25-12-17 08-38-20 3818.png");
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("25-12-17 08-38-20 3818.png"),
+            false);
 
         // We've had to laxen the similarity threshold a bit on this one, it seems to be more variable with this image,
         // though often it's saying more or less the same thing
@@ -157,130 +148,9 @@ public class ImageInfoServiceTest {
         runWithImage("25-12-17 08-50-55 3819.png");
     }*/
 
-    private ImageInfo runWithImage(final String imageName) throws IOException {
-        final Path testImagePath = Paths.get("src/test/resources/test-images/%s".formatted(imageName))
-            .toAbsolutePath();
-
-        final var originalImage = ImageIO.read(Paths.get(testImagePath.toString()).toFile());
-
-        final ImageContent imageContent = getImageContentAndResizeIt(originalImage,
-            testImagePath.toAbsolutePath().toString());
-
-        final var tagsAndDescription = imageInfoService.getTagsAndDescription(imageContent);
-        final var isTextResp = imageInfoService.isText(imageContent);
-
-        final var info = new ImageInfo(
-            tagsAndDescription.tags(),
-            tagsAndDescription.fullDescription(),
-            null,
-            isTextResp,
-            null,
-            null);
-
-        System.out.printf("== %s ==%n", imageName);
-        //System.out.println("title: " + info.title());
-        System.out.println("tags: " + info.tags());
-        System.out.println("description: " + info.fullDescription());
-        System.out.println("isText: " + info.isText());
-        System.out.println("========");
-
-        return info;
-    }
-
-    private ImageContent getImageContentAndResizeIt(BufferedImage originalImage, final String imagePath) {
-        try {
-            final int originalWidth = originalImage.getWidth();
-            final int originalHeight = originalImage.getHeight();
-
-            final BufferedImage resizedImage = resizeImage(originalImage, 1024);
-
-            final int resizedWidth = resizedImage.getWidth();
-            final int resizedHeight = resizedImage.getHeight();
-
-            // Convert a resized image to JPEG with compression for smaller file size
-            // Always use JPEG to ensure good compression regardless of source format
-            final byte[] imageBytes = imageToJpegBytes(resizedImage, 0.85f); // 85% quality
-            final long resizedFileSize = imageBytes.length;
-
-            // Log the resize information
-            final long originalFileSize = Files.size(Paths.get(imagePath));
-            System.out.printf("Image resize: %dx%d (%.1f KB) -> %dx%d (%.1f KB)%n",
-                originalWidth, originalHeight, originalFileSize / 1024.0,
-                resizedWidth, resizedHeight, resizedFileSize / 1024.0);
-
-            final String base64Img = Base64.getEncoder().encodeToString(imageBytes);
-            final long base64Size = base64Img.length();
-            System.out.printf("Base64 size: %.1f KB%n", base64Size / 1024.0);
-
-            return ImageContent.from(base64Img, "image/jpeg");
-        }
-        catch (IOException ex) {
-            throw new RuntimeException("Could not parse image: " + imagePath, ex);
-        }
-    }
-
-    private BufferedImage resizeImage(final BufferedImage originalImage, final int maxDimension) {
-        final int originalWidth = originalImage.getWidth();
-        final int originalHeight = originalImage.getHeight();
-
-        // If image is already smaller than max dimension, return original
-        if (originalWidth <= maxDimension && originalHeight <= maxDimension) {
-            return originalImage;
-        }
-
-        // Calculate new dimensions maintaining aspect ratio
-        final double scale = Math.min(
-            (double) maxDimension / originalWidth,
-            (double) maxDimension / originalHeight
-        );
-
-        final int newWidth = (int) (originalWidth * scale);
-        final int newHeight = (int) (originalHeight * scale);
-
-        // Create resized image with better quality rendering
-        final BufferedImage resizedImage = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_RGB);
-
-        final Graphics2D g2d = resizedImage.createGraphics();
-        try {
-            // Use high-quality rendering hints
-            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2d.drawImage(originalImage, 0, 0, newWidth, newHeight, null);
-        }
-        finally {
-            g2d.dispose();
-        }
-
-        return resizedImage;
-    }
-
-    /**
-     * Converts a BufferedImage to a JPEG byte array with specified quality. This ensures good compression regardless of
-     * source format.
-     */
-    private byte[] imageToJpegBytes(final BufferedImage image, final float quality) throws IOException {
-        final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        // Get JPEG writer
-        final ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
-        final ImageWriteParam param = writer.getDefaultWriteParam();
-
-        // Enable compression
-        if (param.canWriteCompressed()) {
-            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-            param.setCompressionQuality(quality);
-        }
-
-        try (ImageOutputStream ios = ImageIO.createImageOutputStream(baos)) {
-            writer.setOutput(ios);
-            writer.write(null, new IIOImage(image, null, null), param);
-        }
-        finally {
-            writer.dispose();
-        }
-
-        return baos.toByteArray();
+    private String getAbsPathToImage(final String imageName) {
+        return Paths.get("src/test/resources/test-images/%s".formatted(imageName))
+            .toAbsolutePath().toString();
     }
 
     /**

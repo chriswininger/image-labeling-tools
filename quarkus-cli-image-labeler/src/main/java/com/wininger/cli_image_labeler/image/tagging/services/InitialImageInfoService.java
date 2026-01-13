@@ -1,6 +1,6 @@
 package com.wininger.cli_image_labeler.image.tagging.services;
 
-import com.wininger.cli_image_labeler.image.tagging.dto.InitialImageInfo;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTagsAndDescriptionModelResponse;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.service.UserMessage;
 
@@ -9,5 +9,5 @@ public interface InitialImageInfoService {
       "\n" +
       "      * You are a bot that tags images. You can create your own tags based on what you see but,\n" +
       "      * be sure to use the following tags if any apply: person, building, flower, flowers, tree, trees, animal, animals, chicken, bird.")
-  InitialImageInfo getImageInfo(@UserMessage ImageContent imageContent);
+  ImageInfoTagsAndDescriptionModelResponse getImageInfo(@UserMessage ImageContent imageContent);
 }
