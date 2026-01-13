@@ -389,9 +389,15 @@ public class ImageInfoService
   }
 
   public Boolean isText(final ImageContent imageContent) {
+    final var responseFormat = ResponseFormat.builder()
+        .type(ResponseFormatType.JSON)
+        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoIsTextModelResponse.class).get())
+        .build();
+
     final ChatModel chatModelTitle = OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
+        .responseFormat(responseFormat)
         .logRequests(true)
         .logResponses(true)
         .build();
@@ -408,7 +414,7 @@ public class ImageInfoService
 
   public InitialImageInfo getTagsAndDescription(final ImageContent imageContent) {
     final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName("gemma3:12b")
+        .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
         .build();
 
