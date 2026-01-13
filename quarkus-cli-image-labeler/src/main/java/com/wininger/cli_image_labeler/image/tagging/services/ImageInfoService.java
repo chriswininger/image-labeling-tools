@@ -47,16 +47,6 @@ public class ImageInfoService
 
   private static final int IMAGE_DIMENSION_FOR_THUMBNAIL = 500;
 
-  private final OllamaChatModel multiModalModel;
-
-  public ImageInfoService() {
-    multiModalModel = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
-        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
-        .baseUrl("http://localhost:11434/")
-        .build();
-  }
-
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
     // Load and resize the image
     final BufferedImage originalImage;
@@ -130,10 +120,7 @@ public class ImageInfoService
 
         final String shortTitle = getShortTitle(tagsAndDescription.fullDescription());
         final Boolean isText = isText(imageContent);
-
-        // TODO Skip OCR for now
-        // final String textContents = isText ? doOCR(imageContent) : null;
-        final String textContents = null;
+        final String textContents = isText ? doOCR(imageContent) : null;
 
         if (isText && !tagsAndDescription.tags().contains(TEXT_TAG)) {
           // ensure it's in the labels
@@ -223,7 +210,7 @@ public class ImageInfoService
   // degrades, so I'm splitting this into multiple passes
   private String getShortTitle(final String fullDescription) {
     final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
-        .chatModel(multiModalModel)
+        .chatModel(getMultiModalModel(ImageInfoTitleModelResponse.class))
         .build();
 
     final ImageInfoTitleModelResponse titleInfo = titleTx.extractTitle(fullDescription);
@@ -232,22 +219,8 @@ public class ImageInfoService
   }
 
   public Boolean isText(final ImageContent imageContent) {
-    final var responseFormat = ResponseFormat.builder()
-        .type(ResponseFormatType.JSON)
-        .jsonSchema(JsonSchemas.jsonSchemaFrom(ImageInfoIsTextModelResponse.class).get())
-        .build();
-
-    final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName(MULTI_MODAL_MODAL)
-        .baseUrl("http://localhost:11434/")
-        .responseFormat(responseFormat)
-        .logRequests(true) // turn on to see full logging
-        .logResponses(true) // turn on to see full logging
-        .temperature(0.8D)
-        .build();
-
     final ImageInfoIsTextService titleTx = AiServices.builder(ImageInfoIsTextService.class)
-        .chatModel(chatModelTitle)
+        .chatModel(getMultiModalModel(ImageInfoIsTextModelResponse.class))
         .build();
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
@@ -260,7 +233,7 @@ public class ImageInfoService
 
   public ImageInfoTagsAndDescriptionModelResponse getTagsAndDescription(final ImageContent imageContent) {
     final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
-        .chatModel(multiModalModel)
+        .chatModel(getMultiModalModel(ImageInfoTagsAndDescriptionModelResponse.class))
         .build();
 
     //System.out.println("token usage: " + chatResponse.tokenUsage());
@@ -275,12 +248,28 @@ public class ImageInfoService
         .baseUrl("http://localhost:11434/")
         .build();
 
-
     final TextContent command = TextContent.from("\nExtract the text in the image.");
     final UserMessage userMessage = UserMessage.from(imageContent, command);
     final ChatResponse chatResponse = modelOcr.chat(userMessage);
 
     // Parse the JSON response into ImageInfoModelResponse
     return chatResponse.aiMessage().text();
+  }
+
+  private OllamaChatModel getMultiModalModel(Class schemaClass) {
+    final var responseFormat = ResponseFormat.builder()
+        .type(ResponseFormatType.JSON)
+        .jsonSchema(JsonSchemas.jsonSchemaFrom(schemaClass).get())
+        .build();
+
+    return OllamaChatModel.builder()
+        .modelName(MULTI_MODAL_MODAL)
+        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
+        .baseUrl("http://localhost:11434/")
+        .responseFormat(responseFormat)
+        .logRequests(false) // turn on to see full logging
+        .logResponses(false) // turn on to see full logging
+        //.temperature(0.9D)
+        .build();
   }
 }

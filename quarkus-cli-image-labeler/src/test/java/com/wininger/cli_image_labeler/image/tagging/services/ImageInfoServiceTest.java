@@ -1,6 +1,5 @@
 package com.wininger.cli_image_labeler.image.tagging.services;
 
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfo;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
@@ -9,6 +8,7 @@ import io.quarkus.test.junit.QuarkusTest;
 import jakarta.inject.Inject;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -48,12 +48,17 @@ public class ImageInfoServiceTest {
             "person", "table", "beer", "glasses", "trees", "outdoor", "shadow", "dark", "tableware", "outdoor scene"
         );
 
+        final String expectedTitle = "Man Enjoying Beer Outdoors";
+
         final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage("24-10-13 14-43-43 2024.jpg"),
             false);
 
-        assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
         assert(result.isText()).equals(false);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
     @Test
@@ -68,12 +73,17 @@ public class ImageInfoServiceTest {
             "fire", "fire pit", "garden", "flowers", "plants", "night", "outdoor", "evening", "dark", "fence", "vegetation", "darkness"
         );
 
+        final String expectedTitle = "Nighttime Fire Pit & Blooms";
+
         final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage("24-10-12 19-44-41 7914.jpg"),
             false);
 
-        assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
         assert(result.isText()).equals(false);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
     @Test
@@ -87,12 +97,17 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "feathered", "domestic fowl", "farm animal", "domestic"
         );
 
+        final String expectedTitle = "Focused Chicken Portrait - Brown Feathered Friend";
+
         final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage("24-10-29 09-02-52 8203.jpg"),
-        false);
+            false);
 
-        assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
         assert(result.isText()).equals(false);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
     @Test
@@ -105,12 +120,17 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "pet", "domestic"
         );
 
+        final String expectedTitle = "Man, Beer, & Insects - Outdoor Scene";
+
         final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage("24-12-04 15-22-46 8617.jpg"),
             false);
 
-        assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
         assert(result.isText()).equals(false);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
     @Test
@@ -125,14 +145,67 @@ public class ImageInfoServiceTest {
             "code", "programming", "algorithm", "java", "mathematics", "documentation"
         );
 
+        final String expectedTitle = "Man, Beer, & Insects - Outdoor Scene";
+
+        final String expectedTextContent = """
+            Measuring Similarity: Cosine
+            
+            Similarity and Distance
+            
+            To compare two embeddings, we typically use
+            
+            cosine similarity. It calculates the angle
+            
+            between two vectors, ignoring their
+            
+            magnitude (length). A simple, visual
+            
+            representation of cosine similarity is the
+            
+            angle between two arrows (vectors) in a
+            
+            graph. If the angle is small, the vectors are
+            
+            similar; if it's large, they are dissimilar, as
+            
+            shown in Figure 5-1.
+            
+            Similar vectors
+            
+            This is important because we care about the
+            
+            direction of the vector (meaning), not its size.
+            
+            The following Java example shows how to
+            
+            compute cosine similarity between two
+            
+            vectors by using the ND4J library:
+            
+            import org.nd4j.linalg.api.ndarray.INDAI
+            
+            import org.nd4j.linalg.factory.Nd4j;
+            
+            import org.nd4j.linalg.ops.transforms.Ti
+            
+            public class CosineSimilarity {
+            
+            public static double calculateCosine
+            
+            Check if vectors have the same
+            """;
+
         final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage("25-12-17 08-38-20 3818.png"),
             false);
 
-        // We've had to laxen the similarity threshold a bit on this one, it seems to be more variable with this image,
+        // We've had to relax the similarity threshold a bit on this one, it seems to be more variable with this image,
         // though often it's saying more or less the same thing
-        assertSimilarity(expectedDescription, expectedTags, result, SIMILARITY_THRESHOLD_RELAXED);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_RELAXED);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_RELAXED);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
         assert(result.isText()).equals(true);
+        assertSimilarityTextContent(expectedTextContent, result.textContents(), SIMILARITY_THRESHOLD_RELAXED);
     }
 
     /*
@@ -179,37 +252,67 @@ public class ImageInfoServiceTest {
         return calculateSimilarity(expectedTagsStr, actualTagsStr);
     }
 
-    private void assertSimilarity(
+    private void assertSimilarityDescription(
         final String expectedDescription,
-        final List<String> expectedTags,
-        final ImageInfo result,
+        final String actualDescription,
         final double similarityThreshold
     ) {
-        // Check semantic similarity of description
-        final double descriptionSimilarity = calculateSimilarity(expectedDescription, result.fullDescription());
+        final double similarity = calculateSimilarity(expectedDescription, actualDescription);
 
-        // Check semantic similarity of tags
-        final double tagsSimilarity = calculateTagsSimilarity(expectedTags, result.tags());
+        System.out.println("\n--- Description Similarity ---");
+        System.out.println("Similarity: " + similarity);
+        System.out.println("Threshold: " + similarityThreshold);
 
-        printSimilarityResults(descriptionSimilarity, tagsSimilarity, similarityThreshold);
-
-        assertTrue(descriptionSimilarity >= similarityThreshold,
+        assertTrue(similarity >= similarityThreshold,
             String.format("Description similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
-                descriptionSimilarity, similarityThreshold, expectedDescription, result.fullDescription()));
-
-        assertTrue(tagsSimilarity >= similarityThreshold,
-            String.format("Tags similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
-                tagsSimilarity, similarityThreshold, expectedTags, result.tags()));
+                similarity, similarityThreshold, expectedDescription, actualDescription));
     }
 
-    private void printSimilarityResults(
-        final double descriptionSimilarity,
-        final double tagsSimilarity,
+    private void assertSimilarityTags(
+        final List<String> expectedTags,
+        final List<String> actualTags,
         final double similarityThreshold
     ) {
-        System.out.println("\n--- Similarity Results ---");
-        System.out.println("Description similarity: " + descriptionSimilarity);
-        System.out.println("Tags similarity: " + tagsSimilarity);
+        final double similarity = calculateTagsSimilarity(expectedTags, actualTags);
+
+        System.out.println("\n--- Tags Similarity ---");
+        System.out.println("Similarity: " + similarity);
         System.out.println("Threshold: " + similarityThreshold);
+
+        assertTrue(similarity >= similarityThreshold,
+            String.format("Tags similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                similarity, similarityThreshold, expectedTags, actualTags));
+    }
+
+    private void assertSimilarityTitle(
+        final String expectedTitle,
+        final String actualTitle,
+        final double similarityThreshold
+    ) {
+        final double similarity = calculateSimilarity(expectedTitle, actualTitle);
+
+        System.out.println("\n--- Title Similarity ---");
+        System.out.println("Similarity: " + similarity);
+        System.out.println("Threshold: " + similarityThreshold);
+
+        assertTrue(similarity >= similarityThreshold,
+            String.format("Title similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                similarity, similarityThreshold, expectedTitle, actualTitle));
+    }
+
+    private void assertSimilarityTextContent(
+        final String expectedTextContent,
+        final String actualTextContent,
+        final double similarityThreshold
+    ) {
+        final double similarity = calculateSimilarity(expectedTextContent, actualTextContent);
+
+        System.out.println("\n--- Text Content Similarity ---");
+        System.out.println("Similarity: " + similarity);
+        System.out.println("Threshold: " + similarityThreshold);
+
+        assertTrue(similarity >= similarityThreshold,
+            String.format("Text content similarity %.3f is below threshold %.3f%nExpected: %s%nActual: %s",
+                similarity, similarityThreshold, expectedTextContent, actualTextContent));
     }
 }
