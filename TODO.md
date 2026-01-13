@@ -38,4 +38,6 @@
 * "/Users/chriswininger/Pictures/halloween-collage.png", "java.lang.RuntimeException"
   "/Users/chriswininger/Pictures/test-images/25-12-18 08-13-56 3828.png", "com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest"
   "/Users/chriswininger/Pictures/test-images/25-12-21 16-00-01 3840.jpg", "com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest"
-
+* This is an odd /home/chris/Pictures/test-images/25-12-17 08-50-55 3819.png
+    A photo showing a group of chickens in a red and white painted barn. The barn is located outdoors, likely on a farm. The chickens are scattered throughout the image. The scene appears bright and sunny.
+* clearly chickens but :shrug: /home/chris/Pictures/test-images/24-11-14 14-47-58 8380.jpg

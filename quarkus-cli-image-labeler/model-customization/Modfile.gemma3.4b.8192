@@ -1,0 +1,5 @@
+# https://blog.driftingruby.com/ollama-context-window/
+# we can possibly go as high as 131072, but that might knock it out of vram
+# run: ollama create gemma3-8192:4b -f ./Modfile.gemma3.4b.8192
+FROM gemma3:4b
+PARAMETER num_ctx 8192
