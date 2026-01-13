@@ -187,7 +187,6 @@ public class ImageInfoService
           final String shortTitle = getShortTitle(modelResponse.fullDescription());
           final Boolean isText = isText(imageContent);
           final String textContents = isText ? doOCR(imageContent) : null;
-          tempTest(imageContent);
 
           if (isText && !modelResponse.tags().contains(TEXT_TAG)) {
             // ensure it's in the labels
@@ -389,10 +388,12 @@ public class ImageInfoService
     return titleInfo.shortTitle();
   }
 
-  private Boolean isText(final ImageContent imageContent) {
+  public Boolean isText(final ImageContent imageContent) {
     final ChatModel chatModelTitle = OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
         .baseUrl("http://localhost:11434/")
+        .logRequests(true)
+        .logResponses(true)
         .build();
 
     final ImageInfoIsTextService titleTx = AiServices.builder(ImageInfoIsTextService.class)
@@ -401,7 +402,21 @@ public class ImageInfoService
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
 
+    System.out.println("!!! reasoning: " + textInfo.reason());
     return textInfo.isText();
+  }
+
+  public InitialImageInfo getTagsAndDescription(final ImageContent imageContent) {
+    final ChatModel chatModelTitle = OllamaChatModel.builder()
+        .modelName("gemma3:12b")
+        .baseUrl("http://localhost:11434/")
+        .build();
+
+    final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
+        .chatModel(chatModelTitle)
+        .build();
+
+    return titleTx.getImageInfo(imageContent);
   }
 
   // worked well on cli: `llama run deepseek-ocr '"/Users/chriswininger/Pictures/test-images/25-12-17 08-50-55 3819.png"\nExtract the text in the image.'`
@@ -419,20 +434,4 @@ public class ImageInfoService
     // Parse the JSON response into ImageInfoModelResponse
     return chatResponse.aiMessage().text();
   }
-
-  private void tempTest(final ImageContent imageContent) {
-    final ChatModel chatModelTitle = OllamaChatModel.builder()
-        .modelName("gemma3:4b")
-        .baseUrl("http://localhost:11434/")
-        .build();
-
-    final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
-        .chatModel(chatModelTitle)
-        .build();
-
-    final InitialImageInfo info = titleTx.getImageInfo(imageContent);
-
-    System.out.println("!!! INFO Test: " + info);
-  }
-
 }

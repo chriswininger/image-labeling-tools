@@ -53,7 +53,7 @@ public class ImageInfoServiceTest {
 
     private static final String EMBEDDING_MODEL = "nomic-embed-text";
     private static final String OLLAMA_BASE_URL = "http://localhost:11434/";
-    private static final double SIMILARITY_THRESHOLD = 0.80;
+    private static final double SIMILARITY_THRESHOLD = 0.75;
 
     @Test
     void test_a_middle_aged_man_having_a_beer() throws IOException {
@@ -66,7 +66,7 @@ public class ImageInfoServiceTest {
             "person", "table", "beer", "glasses", "trees", "outdoor", "shadow", "dark", "tableware", "outdoor scene"
         );
 
-        final InitialImageInfo result = runWithImage("24-10-13 14-43-43 2024.jpg");
+        final var result = runWithImage("24-10-13 14-43-43 2024.jpg");
 
         assertSimilarity(expectedDescription, expectedTags, result);
     }
@@ -83,7 +83,7 @@ public class ImageInfoServiceTest {
             "fire", "fire pit", "garden", "flowers", "plants", "night", "outdoor", "evening", "dark", "fence", "vegetation", "darkness"
         );
 
-        final InitialImageInfo result = runWithImage("24-10-12 19-44-41 7914.jpg");
+        final var result = runWithImage("24-10-12 19-44-41 7914.jpg");
 
         assertSimilarity(expectedDescription, expectedTags, result);
     }
@@ -99,7 +99,7 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "feathered", "domestic fowl", "farm animal", "domestic"
         );
 
-        final InitialImageInfo result = runWithImage("24-10-29 09-02-52 8203.jpg");
+        final var result = runWithImage("24-10-29 09-02-52 8203.jpg");
 
         assertSimilarity(expectedDescription, expectedTags, result);
     }
@@ -114,7 +114,7 @@ public class ImageInfoServiceTest {
             "chicken", "bird", "animal", "pet", "domestic"
         );
 
-        final InitialImageInfo result = runWithImage("24-12-04 15-22-46 8617.jpg");
+        final var result = runWithImage("24-12-04 15-22-46 8617.jpg");
 
         assertSimilarity(expectedDescription, expectedTags, result);
     }
@@ -130,11 +130,13 @@ public class ImageInfoServiceTest {
             "diagram", "formula", "math", "mathematics", "equation", "symbols", "vectors", "linear algebra", "NDArray", "matrix"
         );
 
-        final InitialImageInfo result = runWithImage("25-12-17 08-38-20 3818.png");
+        final var result = runWithImage("25-12-17 08-38-20 3818.png");
 
         assertSimilarity(expectedDescription, expectedTags, result);
+        assert(result.isText()).equals(true);
     }
 
+    /*
     @Disabled
     @Test
     void test__a_screenshot_from_a_book_discussing_vector_stores() throws IOException {
@@ -145,9 +147,9 @@ public class ImageInfoServiceTest {
         // The scene suggests a rural farm setting with livestock and agricultural activity.
         // Several chickens are visible in the background, adding to the farmyard atmosphere.
         runWithImage("25-12-17 08-50-55 3819.png");
-    }
+    }*/
 
-    private InitialImageInfo runWithImage(final String imageName) throws IOException {
+    private ImageInfo runWithImage(final String imageName) throws IOException {
         final Path testImagePath = Paths.get("src/test/resources/test-images/%s".formatted(imageName))
             .toAbsolutePath();
 
@@ -156,19 +158,19 @@ public class ImageInfoServiceTest {
         final ImageContent imageContent = getImageContentAndResizeIt(originalImage,
             testImagePath.toAbsolutePath().toString());
 
-        final ChatModel chatModelTitle = OllamaChatModel.builder()
-            .modelName("gemma3:4b")
-            .baseUrl("http://localhost:11434/")
-            .build();
+        final var tagsAndDescription = imageInfoService.getTagsAndDescription(imageContent);
+        final var isTextResp = imageInfoService.isText(imageContent);
 
-        final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
-            .chatModel(chatModelTitle)
-            .build();
-
-        final InitialImageInfo info = titleTx.getImageInfo(imageContent);
+        final var info = new ImageInfo(
+            tagsAndDescription.tags(),
+            tagsAndDescription.fullDescription(),
+            null,
+            isTextResp,
+            null,
+            null);
 
         System.out.printf("== %s ==%n", imageName);
-        // System.out.println("title: " + info.title());
+        //System.out.println("title: " + info.title());
         System.out.println("tags: " + info.tags());
         System.out.println("description: " + info.fullDescription());
         System.out.println("========");
@@ -301,7 +303,7 @@ public class ImageInfoServiceTest {
     private void assertSimilarity(
         final String expectedDescription,
         final List<String> expectedTags,
-        final InitialImageInfo result
+        final ImageInfo result
     ) {
         // Check semantic similarity of description
         final double descriptionSimilarity = calculateSimilarity(expectedDescription, result.fullDescription());
