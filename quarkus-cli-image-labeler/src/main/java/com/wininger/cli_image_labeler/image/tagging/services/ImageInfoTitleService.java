@@ -1,6 +1,6 @@
 package com.wininger.cli_image_labeler.image.tagging.services;
 
-import com.wininger.cli_image_labeler.image.tagging.dto.ImageInfoTitleModelResponse;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTitleModelResponse;
 import dev.langchain4j.service.UserMessage;
 
 public interface ImageInfoTitleService

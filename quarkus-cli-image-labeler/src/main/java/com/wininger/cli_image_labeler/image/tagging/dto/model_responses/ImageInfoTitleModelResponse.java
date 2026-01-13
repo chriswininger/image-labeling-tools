@@ -1,4 +1,4 @@
-package com.wininger.cli_image_labeler.image.tagging.dto;
+package com.wininger.cli_image_labeler.image.tagging.dto.model_responses;
 
 import dev.langchain4j.model.output.structured.Description;
 
