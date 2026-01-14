@@ -61,6 +61,33 @@ public class ImageInfoServiceTest {
         assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
+    // 24-10-13 14-43-56 2024.jpg
+    @Test
+    void test_the_same_middle_aged_man_having_a_beer_from_a_different_perspective() throws IOException {
+        final String expectedDescription =
+            "A middle-aged man sits at an outdoor table, holding a dark beer glass. He is wearing a dark " +
+                "t-shirt with a graphic design featuring insects. The table is surrounded by trees, creating " +
+                "a shaded outdoor setting.";
+
+        final List<String> expectedTags = List.of(
+            "person", "table", "beer", "glasses", "trees", "outdoor", "shadow", "dark", "tableware", "outdoor scene"
+        );
+
+        final String expectedTitle = "Man Enjoying Beer Outdoors";
+
+        final var result = imageInfoService.generateImageInfoAndMetadata(
+            getAbsPathToImage("24-10-13 14-43-56 2024.jpg"),
+            false);
+
+        System.out.println("results: " + result);
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
+        assert(result.isText()).equals(false);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
+    }
+
+
     @Test
     void test_a_roaring_fire_pit() throws IOException {
         final String expectedDescription =
