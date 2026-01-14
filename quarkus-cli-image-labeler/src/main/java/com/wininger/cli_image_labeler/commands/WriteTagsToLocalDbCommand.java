@@ -21,8 +21,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import io.quarkus.arc.Arc;
 
 import com.wininger.cli_image_labeler.image.tagging.db.TagEntity;
 
@@ -36,6 +42,9 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
     @Option(names = "--update-existing", description = "Update existing database entries and regenerate thumbnails")
     boolean updateExisting;
+
+    @Option(names = "--parallel", description = "Number of images to process in parallel (default: 1)", defaultValue = "1")
+    int parallelCount;
 
     private final ImageInfoService imageInfoService;
     private final ImageInfoRepository imageTagRepository;
@@ -80,17 +89,43 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 .count();
 
             System.out.println("Found " + totalImages + " image(s) to process");
+            System.out.println("Processing with parallelism: " + parallelCount);
+
+            final AtomicLong processed = new AtomicLong(0);
+            final ExecutorService executor = Executors.newFixedThreadPool(parallelCount);
 
             try (Stream<Path> imagePaths = Files.walk(directory)) {
-                final long[] processed = {0};
-                imagePaths
+                final List<Path> imageList = imagePaths
                     .filter(Files::isRegularFile)
                     .filter(this::isImageFile)
-                    .forEach(imagePath -> {
-                        processImage(imagePath, failLogName);
-                        processed[0]++;
-                        System.out.println("Progress: " + processed[0] + "/" + totalImages);
+                    .toList();
+
+                for (final Path imagePath : imageList) {
+                    executor.submit(() -> {
+                        // Activate CDI request context for this thread
+                        Arc.container().requestContext().activate();
+                        try {
+                            processImage(imagePath, failLogName);
+                            final long count = processed.incrementAndGet();
+                            System.out.println("Progress: " + count + "/" + totalImages);
+                        } finally {
+                            Arc.container().requestContext().deactivate();
+                        }
                     });
+                }
+            }
+
+            // Shutdown executor and wait for all tasks to complete
+            executor.shutdown();
+            try {
+                // Wait up to 24 hours for all tasks to complete
+                if (!executor.awaitTermination(24, TimeUnit.HOURS)) {
+                    System.err.println("Warning: Executor did not terminate in time");
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executor.shutdownNow();
+                Thread.currentThread().interrupt();
             }
         } catch (IOException e) {
             System.err.println("Error walking directory: " + e.getMessage());
