@@ -28,6 +28,8 @@ import dev.langchain4j.model.ollama.OllamaChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.output.JsonSchemas;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import static com.wininger.cli_image_labeler.image.tagging.utils.ImageUtils.*;
 import static java.util.Objects.nonNull;
@@ -46,6 +48,28 @@ public class ImageInfoService
   private static final int MAX_IMAGE_DIMENSION = 1024;
 
   private static final int IMAGE_DIMENSION_FOR_THUMBNAIL = 500;
+
+  private final OllamaChatModel isTextModel;
+
+  private final OllamaChatModel titleModel;
+
+  private final OllamaChatModel tagAndDescriptionModel;
+
+  private final boolean logRequests;
+
+  private final boolean logResponses;
+
+  @Inject
+  public ImageInfoService(
+      @ConfigProperty(name = "ollama.log-requests", defaultValue = "false") boolean logRequests,
+      @ConfigProperty(name = "ollama.log-responses", defaultValue = "false") boolean logResponses
+  ) {
+    this.logRequests = logRequests;
+    this.logResponses = logResponses;
+    isTextModel = getMultiModalModel(ImageInfoIsTextModelResponse.class);
+    titleModel = getMultiModalModel(ImageInfoTitleModelResponse.class);
+    tagAndDescriptionModel = getMultiModalModel(ImageInfoTagsAndDescriptionModelResponse.class);
+  }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
     // Load and resize the image
@@ -120,7 +144,7 @@ public class ImageInfoService
 
         final String shortTitle = getShortTitle(tagsAndDescription.fullDescription());
         final Boolean isText = isText(imageContent);
-        final String textContents = isText ? doOCR(imageContent) : null;
+        final String textContents = null; // isText ? doOCR(imageContent) : null;
 
         if (isText && !tagsAndDescription.tags().contains(TEXT_TAG)) {
           // ensure it's in the labels
@@ -210,7 +234,7 @@ public class ImageInfoService
   // degrades, so I'm splitting this into multiple passes
   private String getShortTitle(final String fullDescription) {
     final ImageInfoTitleService titleTx = AiServices.builder(ImageInfoTitleService.class)
-        .chatModel(getMultiModalModel(ImageInfoTitleModelResponse.class))
+        .chatModel(titleModel)
         .build();
 
     final ImageInfoTitleModelResponse titleInfo = titleTx.extractTitle(fullDescription);
@@ -220,7 +244,7 @@ public class ImageInfoService
 
   public Boolean isText(final ImageContent imageContent) {
     final ImageInfoIsTextService titleTx = AiServices.builder(ImageInfoIsTextService.class)
-        .chatModel(getMultiModalModel(ImageInfoIsTextModelResponse.class))
+        .chatModel(isTextModel)
         .build();
 
     final ImageInfoIsTextModelResponse textInfo = titleTx.determineIfIsText(imageContent);
@@ -233,7 +257,7 @@ public class ImageInfoService
 
   public ImageInfoTagsAndDescriptionModelResponse getTagsAndDescription(final ImageContent imageContent) {
     final InitialImageInfoService titleTx = AiServices.builder(InitialImageInfoService.class)
-        .chatModel(getMultiModalModel(ImageInfoTagsAndDescriptionModelResponse.class))
+        .chatModel(tagAndDescriptionModel)
         .build();
 
     //System.out.println("token usage: " + chatResponse.tokenUsage());
@@ -267,8 +291,8 @@ public class ImageInfoService
         //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
         .baseUrl("http://localhost:11434/")
         .responseFormat(responseFormat)
-        .logRequests(false) // turn on to see full logging
-        .logResponses(false) // turn on to see full logging
+        .logRequests(logRequests)
+        .logResponses(logResponses)
         //.temperature(0.9D)
         .build();
   }
