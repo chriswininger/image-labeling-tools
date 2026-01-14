@@ -8,6 +8,8 @@ import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import javax.imageio.ImageIO;
 
 import com.wininger.cli_image_labeler.image.tagging.dto.*;
@@ -112,14 +114,30 @@ public class ImageInfoService
         System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
       }
 
-      final ImageInfoTagsAndDescriptionModelResponse tagsAndDescription = getTagsAndDescription(imageContent);
+      // Run getTagsAndDescription and isText in parallel since they're independent
+      final CompletableFuture<ImageInfoTagsAndDescriptionModelResponse> tagsAndDescriptionFuture =
+          CompletableFuture.supplyAsync(() -> getTagsAndDescription(imageContent));
+      final CompletableFuture<Boolean> isTextFuture =
+          CompletableFuture.supplyAsync(() -> isText(imageContent));
+
+      // Wait for both to complete
+      final ImageInfoTagsAndDescriptionModelResponse tagsAndDescription;
+      final Boolean isText;
+      try {
+        tagsAndDescription = tagsAndDescriptionFuture.get();
+        isText = isTextFuture.get();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new RuntimeException("Interrupted while waiting for model responses", e);
+      } catch (ExecutionException e) {
+        throw new RuntimeException("Error executing model request", e.getCause());
+      }
 
       // Validate all required fields are present
       if (nonNull(tagsAndDescription.tags()) &&
           nonNull(tagsAndDescription.fullDescription())) {
 
         final String shortTitle = getShortTitle(tagsAndDescription.fullDescription());
-        final Boolean isText = isText(imageContent);
         final String textContents = isText ? doOCR(imageContent) : null;
 
         if (isText && !tagsAndDescription.tags().contains(TEXT_TAG)) {
