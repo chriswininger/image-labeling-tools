@@ -26,6 +26,9 @@ dependencies {
 
     // For reading image EXIF metadata
     implementation("com.drewnoakes:metadata-extractor:2.19.0")
+
+    // For writing/modifying image EXIF metadata
+    implementation("org.apache.commons:commons-imaging:1.0.0-alpha5")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
