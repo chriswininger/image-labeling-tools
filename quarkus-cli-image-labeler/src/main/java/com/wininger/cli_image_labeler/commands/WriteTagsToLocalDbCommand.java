@@ -17,7 +17,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -130,7 +129,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
 
             // Generate image info (always generate thumbnail when updating existing entries)
-            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadataExperimental(fullPath, true);
+            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(fullPath, true);
 
             if (Objects.isNull(imageInfo.tags())) {
                 throw new RuntimeException("Null tags were returned");

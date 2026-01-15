@@ -112,7 +112,7 @@ public class ImageInfoServiceTest {
         assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
         assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
         assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
-        assert(result.isText()).equals(false);
+        // assert(result.isText()).equals(false); This one is fuzzy, there is text on the beer glass
         assertNull(result.textContents(), "textContents should be null for non-text images");
     }
 
@@ -307,7 +307,7 @@ public class ImageInfoServiceTest {
     private ImageInfo doRun(final String imageName) {
         final long startTime = System.currentTimeMillis();
 
-        final var result = imageInfoService.generateImageInfoAndMetadataExperimental(
+        final var result = imageInfoService.generateImageInfoAndMetadata(
             getAbsPathToImage(imageName),
             false);
 
