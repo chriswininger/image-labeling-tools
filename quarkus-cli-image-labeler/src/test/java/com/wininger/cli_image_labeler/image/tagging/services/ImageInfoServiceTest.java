@@ -261,18 +261,48 @@ public class ImageInfoServiceTest {
         //assertSimilarityTextContent(getExpectedOCR(), result.textContents(), SIMILARITY_THRESHOLD_RELAXED);
     }
 
-    /*
-    @Disabled
     @Test
     void test__a_screenshot_from_a_book_discussing_vector_stores() throws IOException {
-        // !!! WRONG
-        // tags: [chicken, rooster, farm, barn, animals, outdoor, rural, agriculture, domestic, male]
-        //description: A photograph depicts a brown rooster standing prominently in front of a red barn. The rooster is
-        // facing the camera, displaying its comb and wattles. The barn is a traditional wooden structure with a red roof.
-        // The scene suggests a rural farm setting with livestock and agricultural activity.
-        // Several chickens are visible in the background, adding to the farmyard atmosphere.
-        runWithImage("25-12-17 08-50-55 3819.png");
-    }*/
+        final String expectedDescription =
+            "This infographic visually compares and contrasts three word embedding models: Word2Vec, GloVe, " +
+            "and Sentence-BERT (SBERT). Each model is represented by a panel with a central illustration and " +
+            "text describing its core functionality – Word2Vec utilizing a continuous bag-of-words approach, " +
+            "GloVe analyzing global co-occurrence statistics, and SBERT fine-tuning BERT for sentence-level " +
+            "embeddings. The infographic employs a clean, modern design with a consistent blue color palette.";
+
+        final List<String> expectedTags = List.of(
+            "artificial intelligence",
+            "blue",
+            "co-occurrence",
+            "data",
+            "deep learning",
+            "diagram",
+            "facebook",
+            "glove",
+            "google",
+            "infographic",
+            "learning",
+            "natural language processing",
+            "nlp",
+            "sbert",
+            "sentence-bert",
+            "stanford",
+            "technology",
+            "vector representation",
+            "word embedding",
+            "word2vec"
+        );
+
+        final String expectedTitle = "Word Embedding Model Comparison";
+
+        final var result = doRun("25-12-17 08-50-55 3819.png");
+
+        assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_MODERATE);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
+        assert(result.isText()).equals(true);
+        assertNull(result.textContents(), "textContents should be null for non-text images");
+    }
 
     private ImageInfo doRun(final String imageName) {
         final long startTime = System.currentTimeMillis();

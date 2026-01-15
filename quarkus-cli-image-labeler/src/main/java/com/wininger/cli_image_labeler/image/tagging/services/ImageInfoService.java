@@ -445,14 +445,13 @@ public class ImageInfoService
 
   public boolean isText(final String textReasoning) {
     final double noTextSimilarity = similarityService.calculateSimilarity(textReasoning, "No visible text");
+    final double isTextSimilarity = similarityService.calculateSimilarity(textReasoning, "The image contains text content");
 
-    // TODO (make this debug level)
-    System.out.println("!!! text reasoning: " + textReasoning);
+    // TODO: Make these debug level logging
+    System.out.println("text reasoning: " + textReasoning);
+    System.out.println("noTextSimilarity: " + noTextSimilarity);
+    System.out.println("isTestSimilarity: " + isTextSimilarity);
 
-    if (noTextSimilarity >= 0.5D) {
-      return false;
-    } else {
-      return  true;
-    }
+    return isTextSimilarity > noTextSimilarity;
   }
 }

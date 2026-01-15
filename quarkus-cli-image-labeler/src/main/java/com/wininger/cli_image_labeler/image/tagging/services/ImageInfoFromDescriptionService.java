@@ -17,7 +17,7 @@ public interface ImageInfoFromDescriptionService
       - fullDescription: A concise description summarizing the key elements (1-3 sentences)
       - shortTitle: A very short title (max 100 characters)
       - doesContainText: Briefly explain whether the image contains any visible text and what it says \
-      (e.g., "Contains a sign reading Welcome", "Shows a book page with paragraphs", "No visible text")
+      (e.g., "Contains a sign reading Welcome", "Shows a book page with paragraphs", "Is an explanation a concept", "No visible text")
       
       Image description:
       ======
