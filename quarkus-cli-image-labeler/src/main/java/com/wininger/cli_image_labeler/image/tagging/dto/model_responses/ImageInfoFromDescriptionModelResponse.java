@@ -14,6 +14,6 @@ public record ImageInfoFromDescriptionModelResponse(
     @Description("A very short title for the image (max 100 characters). REQUIRED field.")
     String shortTitle,
 
-    @Description("Whether the image focus is on text. Examples: Shot of a blog, book, explanation, or photos of signs, e.g.. (true/false). REQUIRED field.")
-    Boolean isText
+    @Description("Briefly explain whether the image contains any visible text and what that text is about (e.g., 'Contains a sign reading Welcome', 'Shows a book page with paragraphs of text', 'No visible text'). REQUIRED field.")
+    String doesContainText
 ) {}

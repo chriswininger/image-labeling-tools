@@ -63,6 +63,8 @@ public class ImageInfoService
 
   private final OllamaChatModel imageInfoFromDescriptionModel;
 
+  private final SimilarityService similarityService;
+
   private final boolean logRequests;
 
   private final boolean logResponses;
@@ -70,15 +72,19 @@ public class ImageInfoService
   @Inject
   public ImageInfoService(
       @ConfigProperty(name = "ollama.log-requests", defaultValue = "false") boolean logRequests,
-      @ConfigProperty(name = "ollama.log-responses", defaultValue = "false") boolean logResponses
+      @ConfigProperty(name = "ollama.log-responses", defaultValue = "false") boolean logResponses,
+      final SimilarityService similarityService
   ) {
     this.logRequests = logRequests;
     this.logResponses = logResponses;
+
     isTextModel = getMultiModalModel(ImageInfoIsTextModelResponse.class);
     titleModel = getMultiModalModel(ImageInfoTitleModelResponse.class);
     tagAndDescriptionModel = getMultiModalModel(ImageInfoTagsAndDescriptionModelResponse.class);
     unstructuredModel = getUnstructuredMultiModalModel();
     imageInfoFromDescriptionModel = getMultiModalModel(ImageInfoFromDescriptionModelResponse.class);
+
+    this.similarityService = similarityService;
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
@@ -166,10 +172,13 @@ public class ImageInfoService
     final String detailedDescription = getUnstructuredDescription(imageContent);
     System.out.println("Detailed description received: " + detailedDescription.substring(0, Math.min(100, detailedDescription.length())) + "...");
 
+
     // Step 2: Extract structured fields from the description
     System.out.println("Extracting structured info from description...");
     final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription);
-    final List<String> normalizedTags = normalizeTags(extractedInfo);
+
+    final boolean isText = isText(extractedInfo.doesContainText());
+    final List<String> normalizedTags = normalizeTags(extractedInfo, isText);
 
     if (keepThumbnails) {
       // Save thumbnail to archive
@@ -192,7 +201,7 @@ public class ImageInfoService
         normalizedTags,
         extractedInfo.fullDescription(),
         extractedInfo.shortTitle(),
-        extractedInfo.isText(),
+        isText,
         null, // textContents - not populated in experimental method for now
         thumbnailName
     );
@@ -404,14 +413,13 @@ public class ImageInfoService
     return chatResponse.aiMessage().text();
   }
 
-  private List<String> normalizeTags(final ImageInfoFromDescriptionModelResponse modelResponse) {
+  private List<String> normalizeTags(final ImageInfoFromDescriptionModelResponse modelResponse, final boolean isText) {
     // should have already checked this by now, but just in case :-)
     if (isNull(modelResponse.tags())) {
       return null;
     }
 
     final List<String> rawTags = new ArrayList<>(modelResponse.tags());
-    final boolean isText = Boolean.TRUE.equals(modelResponse.isText());
 
     // ensure text is a label (don't worry if it's already there, next step is de-duplication)
     if (isText) {
@@ -433,5 +441,18 @@ public class ImageInfoService
       .filter(str  -> !str.isBlank())
       .sorted()
       .toList();
+  }
+
+  public boolean isText(final String textReasoning) {
+    final double noTextSimilarity = similarityService.calculateSimilarity(textReasoning, "No visible text");
+
+    // TODO (make this debug level)
+    System.out.println("!!! text reasoning: " + textReasoning);
+
+    if (noTextSimilarity >= 0.5D) {
+      return false;
+    } else {
+      return  true;
+    }
   }
 }

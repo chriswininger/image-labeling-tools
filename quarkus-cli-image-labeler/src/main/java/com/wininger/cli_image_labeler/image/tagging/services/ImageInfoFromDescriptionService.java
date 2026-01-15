@@ -16,7 +16,8 @@ public interface ImageInfoFromDescriptionService
       portrait, indoor, outdoor) then add more specific tags for subjects, settings, colors, and themes.
       - fullDescription: A concise description summarizing the key elements (1-3 sentences)
       - shortTitle: A very short title (max 100 characters)
-      - isText: Whether the image focus is on text. Examples: Shot of a blog, book, explanation, or photos of signs, e.g.
+      - doesContainText: Briefly explain whether the image contains any visible text and what it says \
+      (e.g., "Contains a sign reading Welcome", "Shows a book page with paragraphs", "No visible text")
       
       Image description:
       ======
