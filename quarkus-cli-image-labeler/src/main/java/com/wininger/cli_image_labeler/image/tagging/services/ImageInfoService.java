@@ -161,7 +161,7 @@ public class ImageInfoService
     // Step 1: Get unstructured detailed description from the vision model
     System.out.println("Getting unstructured description from vision model...");
     final String detailedDescription = getUnstructuredDescription(imageContent);
-    System.out.println("Detailed description received: " + detailedDescription); //detailedDescription.substring(0, Math.min(100, detailedDescription.length())) + "...");
+    System.out.println("Detailed description received: " + detailedDescription.substring(0, Math.min(100, detailedDescription.length())) + "...");
 
     // Step 2: Extract structured fields from the description
     System.out.println("Extracting structured info from description...");
