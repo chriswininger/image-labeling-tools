@@ -2,6 +2,7 @@ package com.wininger.cli_image_labeler;
 
 import com.wininger.cli_image_labeler.commands.GenerateImageTagsCommand;
 import com.wininger.cli_image_labeler.commands.GenerateImageTagsForDirectoryCommand;
+import com.wininger.cli_image_labeler.commands.ReadFileMetadataCommand;
 import com.wininger.cli_image_labeler.commands.RunMigrationsCommand;
 import com.wininger.cli_image_labeler.commands.WriteTagsToLocalDbCommand;
 import com.wininger.cli_image_labeler.setup.DataDirectoryInitializer;
@@ -13,6 +14,7 @@ import picocli.CommandLine.Command;
          subcommands = {
              GenerateImageTagsCommand.class,
              GenerateImageTagsForDirectoryCommand.class,
+             ReadFileMetadataCommand.class,
              RunMigrationsCommand.class,
              WriteTagsToLocalDbCommand.class
          })

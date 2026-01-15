@@ -22,6 +22,9 @@ dependencies {
 
     implementation 'io.quarkiverse.langchain4j:quarkus-langchain4j-ollama:1.5.0.CR2'
 
+    // For reading image EXIF metadata
+    implementation 'com.drewnoakes:metadata-extractor:2.19.0'
+
     testImplementation 'io.quarkus:quarkus-junit5'
 }
 
