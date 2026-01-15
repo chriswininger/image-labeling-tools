@@ -3,20 +3,28 @@ package com.wininger.metadata_explorer;
 import com.drew.imaging.ImageMetadataReader;
 import com.drew.imaging.ImageProcessingException;
 import com.drew.metadata.Metadata;
+import com.drew.metadata.Tag;
 import com.drew.metadata.exif.ExifSubIFDDirectory;
 import com.drew.metadata.exif.GpsDirectory;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class App {
     public static void main(String[] args) {
-        final String imagePath = "/home/chris/projects/image-labeling-tools/quarkus-cli-image-labeler/src/test/resources/test-images/24-10-12 19-44-41 7914.jpg";
+        final String imagePath = Paths.get("../quarkus-cli-image-labeler/src/test/resources/test-images/24-10-12 19-44-41 7914.jpg")
+            .toAbsolutePath()
+            .normalize()
+            .toString();
 
         try {
-            final Map<String, Object> metadata = extractFileMetadata(imagePath);
+            final Map<String, String> metadata = extractFileMetadata(imagePath);
 
             System.out.println("Metadata for: " + imagePath);
             System.out.println("----------------------------------------");
@@ -33,14 +41,17 @@ public class App {
      * @param imagePath absolute path to the image file
      * @return Map containing metadata fields
      */
-    public static Map<String, Object> extractFileMetadata(final String imagePath) throws ImageProcessingException, IOException {
+    public static Map<String, String> extractFileMetadata(final String imagePath) throws ImageProcessingException, IOException {
         final Map<String, Object> result = new HashMap<>();
         final File imageFile = new File(imagePath);
 
         final Metadata metadata = ImageMetadataReader.readMetadata(imageFile);
 
+       // System.out.println("========");
+        return dump(metadata);
+        //System.out.println("========");
         // Extract GPS coordinates
-        final GpsDirectory gpsDirectory = metadata.getFirstDirectoryOfType(GpsDirectory.class);
+       /* final GpsDirectory gpsDirectory = metadata.getFirstDirectoryOfType(GpsDirectory.class);
         if (gpsDirectory != null && gpsDirectory.getGeoLocation() != null) {
             final var geoLocation = gpsDirectory.getGeoLocation();
             result.put("latitude", geoLocation.getLatitude());
@@ -71,10 +82,42 @@ public class App {
             result.put("createdOn", null);
         }
 
-        return result;
+        return result;*/
     }
 
-    private void dump(final Metadata metadata) {
-        final var grr = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class).getTagNameMap();
+    private static Map<String, String> dump(final Metadata metadata) {
+        final var dir =metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+        final Collection<Tag> tags = dir.getTags();
+
+       return StreamSupport.stream(metadata.getDirectories().spliterator(), false)
+              .flatMap(directory ->
+                  directory.getTags().stream()
+                      .map(tag -> Map.entry(
+                          directory.getName() + "." + tag.getTagName(),
+                          tag.getDescription()
+                      ))
+              )
+              .collect(Collectors.toMap(
+                  Map.Entry::getKey,
+                  Map.Entry::getValue,
+                  (left, right) -> right   // in case of duplicate keys
+              ));
+
+       /*
+        tags.stream().map(t -> {
+          final String name = t.getTagName();
+          final String description = t.getDescription();
+
+          System.out.printf("%s -> %s\n", name, description);
+          return Map.entry(
+              name,
+              description);
+          }).collect(
+            Collectors.toMap(
+                Map.Entry::getKey,
+                Map.Entry::getValue,
+                (left, right) -> right
+          ));
+        */
     }
 }
