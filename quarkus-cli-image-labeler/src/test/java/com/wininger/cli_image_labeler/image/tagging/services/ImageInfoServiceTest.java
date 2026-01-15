@@ -216,10 +216,25 @@ public class ImageInfoServiceTest {
               "function. There is accompanying text explaining the code.";
 
         final List<String> expectedTags = List.of(
-            "code", "programming", "algorithm", "java", "mathematics", "documentation"
+          "angle",
+          "angle measurement",
+          "blue",
+          "cosine similarity",
+          "data analysis",
+          "data science",
+          "diagram",
+          "geometric shapes",
+          "green",
+          "illustration",
+          "mathematics",
+          "red",
+          "similarity",
+          "technical illustration",
+          "vector graphics",
+          "vectors"
         );
 
-        final String expectedTitle = "Man, Beer, & Insects - Outdoor Scene";
+        final String expectedTitle = "Cosine Similarity Vectors Diagram";
 
 
         final var result = doRun("25-12-17 08-38-20 3818.png");
@@ -228,7 +243,7 @@ public class ImageInfoServiceTest {
         // though often it's saying more or less the same thing
         assertSimilarityDescription(expectedDescription, result.fullDescription(), SIMILARITY_THRESHOLD_RELAXED);
         assertSimilarityTags(expectedTags, result.tags(), SIMILARITY_THRESHOLD_RELAXED);
-        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_RELAXED);
+        assertSimilarityTitle(expectedTitle, result.shortTitle(), SIMILARITY_THRESHOLD_MODERATE);
         assert(result.isText()).equals(true);
 
         // Disabling OCR for now as it causes too many performance issues and seems to somehow degrade response

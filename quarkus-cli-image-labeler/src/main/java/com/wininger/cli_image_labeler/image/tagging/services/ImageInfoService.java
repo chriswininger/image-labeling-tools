@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,7 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import static com.wininger.cli_image_labeler.image.tagging.utils.ImageUtils.*;
+import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
 
 @ApplicationScoped
@@ -42,6 +44,7 @@ public class ImageInfoService
   private static final String OCR_MODEL = "deepseek-ocr:3b";
 
   private static final String TEXT_TAG = "text";
+  private static final String PERSON_TAG = "person";
 
   private static final Integer NUM_MODEL_RETRIES = 5;
 
@@ -166,29 +169,7 @@ public class ImageInfoService
     // Step 2: Extract structured fields from the description
     System.out.println("Extracting structured info from description...");
     final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription);
-
-    // Generate a thumbnail filename
-    final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
-
-    // Deduplicate tags, convert to lowercase, sort alphabetically
-    final List<String> deduplicatedTags = extractedInfo.tags() != null
-        ? new HashSet<>(
-            extractedInfo.tags().stream().map(String::toLowerCase).toList()
-        ).stream()
-          .filter(str -> !str.isBlank())
-          .sorted()
-          .toList()
-        : null;
-
-    // Ensure "text" tag is present if isText is true
-    final List<String> finalTags;
-    if (Boolean.TRUE.equals(extractedInfo.isText()) && deduplicatedTags != null && !deduplicatedTags.contains(TEXT_TAG)) {
-      finalTags = new java.util.ArrayList<>(deduplicatedTags);
-      finalTags.add(TEXT_TAG);
-      finalTags.sort(String::compareTo);
-    } else {
-      finalTags = deduplicatedTags;
-    }
+    final List<String> normalizedTags = normalizeTags(extractedInfo);
 
     if (keepThumbnails) {
       // Save thumbnail to archive
@@ -204,8 +185,11 @@ public class ImageInfoService
       saveThumbnail(imagePath, imageBytesForThumbnail);
     }
 
+    // Generate a thumbnail filename (TODO: Eventually let's actually return ImageContent and then defer
+    // all handling of thumbnails to the command)
+    final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
     return new ImageInfo(
-        finalTags,
+        normalizedTags,
         extractedInfo.fullDescription(),
         extractedInfo.shortTitle(),
         extractedInfo.isText(),
@@ -418,5 +402,36 @@ public class ImageInfoService
     final ChatResponse chatResponse = unstructuredModel.chat(userMessage);
 
     return chatResponse.aiMessage().text();
+  }
+
+  private List<String> normalizeTags(final ImageInfoFromDescriptionModelResponse modelResponse) {
+    // should have already checked this by now, but just in case :-)
+    if (isNull(modelResponse.tags())) {
+      return null;
+    }
+
+    final List<String> rawTags = new ArrayList<>(modelResponse.tags());
+    final boolean isText = Boolean.TRUE.equals(modelResponse.isText());
+
+    // ensure text is a label (don't worry if it's already there, next step is de-duplication)
+    if (isText) {
+      rawTags.add(TEXT_TAG);
+    }
+
+    // ensure person is a label (don't worry if it's already there, next step is de-duplication)
+    if (rawTags.contains("man") || rawTags.contains("woman") || rawTags.contains("people")) {
+      rawTags.add(PERSON_TAG);
+    }
+
+    // Deduplicate tags;
+    // Convert to lowercase;
+    // Sort alphabetically
+    return new HashSet<>(
+      // convert to lowercase before de-duplicating
+      rawTags.stream().map(String::toLowerCase).toList()
+    ).stream()
+      .filter(str  -> !str.isBlank())
+      .sorted()
+      .toList();
   }
 }
