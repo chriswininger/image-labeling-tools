@@ -23,6 +23,9 @@ dependencies {
 
     // This dependency is used by the application.
     implementation(libs.guava)
+
+    // For reading image EXIF metadata
+    implementation("com.drewnoakes:metadata-extractor:2.19.0")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
