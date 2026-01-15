@@ -175,7 +175,7 @@ public class ImageInfoService
 
     // Step 2: Extract structured fields from the description
     System.out.println("Extracting structured info from description...");
-    final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription);
+    final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription, imagePath);
 
     final boolean isText = isText(extractedInfo.doesContainText());
     final List<String> normalizedTags = normalizeTags(extractedInfo, isText);
@@ -345,12 +345,34 @@ public class ImageInfoService
     return titleTx.getImageInfo(imageContent);
   }
 
-  private ImageInfoFromDescriptionModelResponse extractImageInfoFromDescription(final String detailedDescription) {
-    final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
+  private ImageInfoFromDescriptionModelResponse extractImageInfoFromDescription(final String detailedDescription, final String imagePathForLogging) {
+    int numbTimesTried = 0;
+
+    while (numbTimesTried < NUM_MODEL_RETRIES) {
+      if (numbTimesTried > 0) {
+        System.out.println("Failed to get a valid result from the model for image: " + imagePathForLogging);
+        System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
+      }
+      final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
         .chatModel(imageInfoFromDescriptionModel)
         .build();
 
-    return service.extractImageInfoFromDetailedImageDescription(detailedDescription);
+      final var result = service.extractImageInfoFromDetailedImageDescription(detailedDescription);
+
+      if (nonNull(result.tags()) &&
+        nonNull(result.fullDescription()) &&
+        nonNull(result.shortTitle()) &&
+        nonNull(result.doesContainText())) {
+        return result;
+      }
+
+      // we did not return a result, increment and decide if we should try again
+      numbTimesTried++;
+    }
+
+    // if we got this far without returning a result it means we exhausted our retries
+    throw new ExceededRetryLimitForModelRequest(
+      "Could not extract image info after %s tries".formatted(NUM_MODEL_RETRIES));
   }
 
   // worked well on cli: `llama run deepseek-ocr '"/Users/chriswininger/Pictures/test-images/25-12-17 08-50-55 3819.png"\nExtract the text in the image.'`
