@@ -130,7 +130,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
 
             // Generate image info (always generate thumbnail when updating existing entries)
-            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(fullPath, true);
+            final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadataExperimental(fullPath, true);
 
             if (Objects.isNull(imageInfo.tags())) {
                 throw new RuntimeException("Null tags were returned");

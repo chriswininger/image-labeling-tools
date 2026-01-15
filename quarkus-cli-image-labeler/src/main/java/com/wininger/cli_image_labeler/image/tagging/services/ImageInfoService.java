@@ -11,6 +11,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 
 import com.wininger.cli_image_labeler.image.tagging.dto.*;
+import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoFromDescriptionModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoIsTextModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTagsAndDescriptionModelResponse;
 import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInfoTitleModelResponse;
@@ -55,6 +56,10 @@ public class ImageInfoService
 
   private final OllamaChatModel tagAndDescriptionModel;
 
+  private final OllamaChatModel unstructuredModel;
+
+  private final OllamaChatModel imageInfoFromDescriptionModel;
+
   private final boolean logRequests;
 
   private final boolean logResponses;
@@ -69,6 +74,8 @@ public class ImageInfoService
     isTextModel = getMultiModalModel(ImageInfoIsTextModelResponse.class);
     titleModel = getMultiModalModel(ImageInfoTitleModelResponse.class);
     tagAndDescriptionModel = getMultiModalModel(ImageInfoTagsAndDescriptionModelResponse.class);
+    unstructuredModel = getUnstructuredMultiModalModel();
+    imageInfoFromDescriptionModel = getMultiModalModel(ImageInfoFromDescriptionModelResponse.class);
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
@@ -123,6 +130,86 @@ public class ImageInfoService
         imageInfo.shortTitle(),
         imageInfo.isText(),
         imageInfo.textContents(),
+        thumbnailName
+    );
+  }
+
+  /**
+   * Experimental method that uses a two-pass approach:
+   * 1. First gets an unstructured detailed description from the vision model
+   * 2. Then extracts structured fields (tags, description, title, isText) from that description
+   *
+   * This approach may produce better quality results since the vision model focuses purely
+   * on describing what it sees, and structured extraction happens separately.
+   */
+  public ImageInfo generateImageInfoAndMetadataExperimental(final String imagePath, final boolean keepThumbnails) {
+    // Load and resize the image
+    final BufferedImage originalImage;
+
+    try {
+      originalImage = ImageIO.read(Paths.get(imagePath).toFile());
+    } catch (IOException ex) {
+      throw new ImageReadException(imagePath, ex);
+    }
+
+    if (originalImage == null) {
+      throw new ImageReadException(imagePath, new NullPointerException("Null value returned from ImageIO.read"));
+    }
+
+    final ImageContent imageContent = getImageContentAndResizeIt(originalImage, imagePath);
+
+    // Step 1: Get unstructured detailed description from the vision model
+    System.out.println("Getting unstructured description from vision model...");
+    final String detailedDescription = getUnstructuredDescription(imageContent);
+    System.out.println("Detailed description received: " + detailedDescription); //detailedDescription.substring(0, Math.min(100, detailedDescription.length())) + "...");
+
+    // Step 2: Extract structured fields from the description
+    System.out.println("Extracting structured info from description...");
+    final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription);
+
+    // Generate a thumbnail filename
+    final String thumbnailName = keepThumbnails ? generateThumbnailFilename(imagePath) : null;
+
+    // Deduplicate tags, convert to lowercase, sort alphabetically
+    final List<String> deduplicatedTags = extractedInfo.tags() != null
+        ? new HashSet<>(
+            extractedInfo.tags().stream().map(String::toLowerCase).toList()
+        ).stream()
+          .filter(str -> !str.isBlank())
+          .sorted()
+          .toList()
+        : null;
+
+    // Ensure "text" tag is present if isText is true
+    final List<String> finalTags;
+    if (Boolean.TRUE.equals(extractedInfo.isText()) && deduplicatedTags != null && !deduplicatedTags.contains(TEXT_TAG)) {
+      finalTags = new java.util.ArrayList<>(deduplicatedTags);
+      finalTags.add(TEXT_TAG);
+      finalTags.sort(String::compareTo);
+    } else {
+      finalTags = deduplicatedTags;
+    }
+
+    if (keepThumbnails) {
+      // Save thumbnail to archive
+      final byte[] imageBytesForThumbnail;
+      try {
+        imageBytesForThumbnail = imageToJpegBytes(
+            resizeImage(originalImage, IMAGE_DIMENSION_FOR_THUMBNAIL), 0.85f);
+      }
+      catch (IOException e) {
+        throw new ImageWriteException("Error Saving thumbnail: ", e);
+      }
+
+      saveThumbnail(imagePath, imageBytesForThumbnail);
+    }
+
+    return new ImageInfo(
+        finalTags,
+        extractedInfo.fullDescription(),
+        extractedInfo.shortTitle(),
+        extractedInfo.isText(),
+        null, // textContents - not populated in experimental method for now
         thumbnailName
     );
   }
@@ -265,6 +352,14 @@ public class ImageInfoService
     return titleTx.getImageInfo(imageContent);
   }
 
+  private ImageInfoFromDescriptionModelResponse extractImageInfoFromDescription(final String detailedDescription) {
+    final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
+        .chatModel(imageInfoFromDescriptionModel)
+        .build();
+
+    return service.extractImageInfoFromDetailedImageDescription(detailedDescription);
+  }
+
   // worked well on cli: `llama run deepseek-ocr '"/Users/chriswininger/Pictures/test-images/25-12-17 08-50-55 3819.png"\nExtract the text in the image.'`
   private String doOCR(final ImageContent imageContent) {
     final ChatModel modelOcr = OllamaChatModel.builder()
@@ -295,5 +390,33 @@ public class ImageInfoService
         .logResponses(logResponses)
         //.temperature(0.9D)
         .build();
+  }
+
+  private OllamaChatModel getUnstructuredMultiModalModel() {
+    return OllamaChatModel.builder()
+        .modelName(MULTI_MODAL_MODAL)
+        .baseUrl("http://localhost:11434/")
+        .logRequests(logRequests)
+        .logResponses(logResponses)
+        .build();
+  }
+
+  /**
+   * Gets a complete and thorough unstructured text description of an image from the model.
+   * Unlike other methods, this does not attempt to parse the response as JSON.
+   *
+   * @param imageContent the image to describe
+   * @return the model's free-form text description of the image
+   */
+  public String getUnstructuredDescription(final ImageContent imageContent) {
+    final TextContent prompt = TextContent.from(
+        "Please provide a complete and thorough description of this image. " +
+        "Include all relevant details about the subjects, setting, colors, composition, " +
+        "and any text or notable elements visible in the image."
+    );
+    final UserMessage userMessage = UserMessage.from(imageContent, prompt);
+    final ChatResponse chatResponse = unstructuredModel.chat(userMessage);
+
+    return chatResponse.aiMessage().text();
   }
 }

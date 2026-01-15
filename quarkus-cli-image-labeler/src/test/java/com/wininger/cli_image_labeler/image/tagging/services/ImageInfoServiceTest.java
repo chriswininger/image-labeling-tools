@@ -50,7 +50,7 @@ public class ImageInfoServiceTest {
 
         final String expectedTitle = "Man Enjoying Beer Outdoors";
 
-        final var result = imageInfoService.generateImageInfoAndMetadata(
+        final var result = imageInfoService.generateImageInfoAndMetadataExperimental(
             getAbsPathToImage("24-10-13 14-43-43 2024.jpg"),
             false);
 
