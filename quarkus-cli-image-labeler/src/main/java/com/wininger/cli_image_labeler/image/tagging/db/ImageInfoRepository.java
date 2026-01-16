@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 
 @ApplicationScoped
@@ -15,23 +16,19 @@ public class ImageInfoRepository {
     EntityManager entityManager;
 
     @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags) {
-        return save(fullPath, description, tags, null, null, null, null);
-    }
-
-    @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName) {
-        return save(fullPath, description, tags, thumbnailName, null, null, null);
-    }
-
-    @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName, final String shortTitle, final Boolean isText) {
-        return save(fullPath, description, tags, thumbnailName, shortTitle, isText, null);
-    }
-
-    @Transactional
-    public ImageInfoEntity save(final String fullPath, final String description, final List<TagEntity> tags, final String thumbnailName, final String shortTitle, final Boolean isText, final String textContents) {
-        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText, textContents);
+    public ImageInfoEntity save(
+        final String fullPath,
+        final String description,
+        final List<TagEntity> tags,
+        final String thumbnailName,
+        final String shortTitle,
+        final Boolean isText,
+        final String textContents,
+        final Double gpsLatitude,
+        final Double gpsLongitude,
+        final Date imageTakenAt
+    ) {
+        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText, textContents, gpsLatitude, gpsLongitude, imageTakenAt);
         // ID will be generated in @PrePersist callback
         entityManager.persist(entity);
         return entity;
@@ -55,4 +52,3 @@ public class ImageInfoRepository {
         .orElse(null);
     }
 }
-

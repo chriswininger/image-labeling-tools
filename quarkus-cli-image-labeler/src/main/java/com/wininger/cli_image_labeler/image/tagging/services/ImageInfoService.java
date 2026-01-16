@@ -7,8 +7,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import javax.imageio.ImageIO;
 
 import com.wininger.cli_image_labeler.image.tagging.dto.*;
@@ -30,6 +32,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getCreatedOn;
+import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getGeoLocation;
 import static com.wininger.cli_image_labeler.image.tagging.utils.ImageUtils.*;
 import static java.util.Objects.isNull;
 import static java.util.Objects.nonNull;
@@ -104,6 +108,31 @@ public class ImageInfoService
     final boolean isText = isText(extractedInfo.doesContainText());
     final List<String> normalizedTags = normalizeTags(extractedInfo, isText);
 
+    // Step 3: Extract file metadata (GPS location and date taken)
+    Double gpsLatitude = null;
+    Double gpsLongitude = null;
+    Date imageTakenAt = null;
+
+    try {
+      final Map<String, Double> geoLocation = getGeoLocation(imagePath);
+      gpsLatitude = geoLocation.get("latitude");
+      gpsLongitude = geoLocation.get("longitude");
+      if (gpsLatitude != null && gpsLongitude != null) {
+        System.out.printf("GPS location extracted: %.6f, %.6f%n", gpsLatitude, gpsLongitude);
+      }
+    } catch (Exception e) {
+      System.err.println("Warning: Could not extract GPS location from " + imagePath + ": " + e.getMessage());
+    }
+
+    try {
+      imageTakenAt = getCreatedOn(imagePath);
+      if (imageTakenAt != null) {
+        System.out.println("Image taken at: " + imageTakenAt);
+      }
+    } catch (Exception e) {
+      System.err.println("Warning: Could not extract date taken from " + imagePath + ": " + e.getMessage());
+    }
+
     if (keepThumbnails) {
       // Save thumbnail to archive
       final byte[] imageBytesForThumbnail;
@@ -127,7 +156,10 @@ public class ImageInfoService
         extractedInfo.shortTitle(),
         isText,
         null, // textContents - not populated in experimental method for now
-        thumbnailName
+        thumbnailName,
+        gpsLatitude,
+        gpsLongitude,
+        imageTakenAt
     );
   }
 

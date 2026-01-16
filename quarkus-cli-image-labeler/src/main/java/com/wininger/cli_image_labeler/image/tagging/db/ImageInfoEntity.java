@@ -12,6 +12,7 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,6 +51,16 @@ public class ImageInfoEntity {
     @Column(name = "text_contents", columnDefinition = "TEXT")
     private String textContents;
 
+    @Column(name = "gps_latitude")
+    private Double gpsLatitude;
+
+    @Column(name = "gps_longitude")
+    private Double gpsLongitude;
+
+    @Column(name = "image_taken_at")
+    @jakarta.persistence.Temporal(jakarta.persistence.TemporalType.TIMESTAMP)
+    private Date imageTakenAt;
+
     @Column(nullable = false, name = "created_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
@@ -69,7 +80,10 @@ public class ImageInfoEntity {
       String thumbnailName,
       String shortTitle,
       Boolean isText,
-      String textContents
+      String textContents,
+      Double gpsLatitude,
+      Double gpsLongitude,
+      Date imageTakenAt
     ) {
         this.fullPath = fullPath;
         this.description = description;
@@ -78,6 +92,9 @@ public class ImageInfoEntity {
         this.shortTitle = shortTitle;
         this.isText = isText != null ? isText : false;
         this.textContents = textContents;
+        this.gpsLatitude = gpsLatitude;
+        this.gpsLongitude = gpsLongitude;
+        this.imageTakenAt = imageTakenAt;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -174,6 +191,30 @@ public class ImageInfoEntity {
 
     public void setTextContents(String textContents) {
         this.textContents = textContents;
+    }
+
+    public Double getGpsLatitude() {
+        return gpsLatitude;
+    }
+
+    public void setGpsLatitude(Double gpsLatitude) {
+        this.gpsLatitude = gpsLatitude;
+    }
+
+    public Double getGpsLongitude() {
+        return gpsLongitude;
+    }
+
+    public void setGpsLongitude(Double gpsLongitude) {
+        this.gpsLongitude = gpsLongitude;
+    }
+
+    public Date getImageTakenAt() {
+        return imageTakenAt;
+    }
+
+    public void setImageTakenAt(Date imageTakenAt) {
+        this.imageTakenAt = imageTakenAt;
     }
 }
 

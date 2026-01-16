@@ -148,6 +148,9 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                 existing.setShortTitle(imageInfo.shortTitle());
                 existing.setIsText(imageInfo.isText());
                 existing.setTextContents(imageInfo.textContents());
+                existing.setGpsLatitude(imageInfo.gpsLatitude());
+                existing.setGpsLongitude(imageInfo.gpsLongitude());
+                existing.setImageTakenAt(imageInfo.imageTakenAt());
                 final ImageInfoEntity updated = imageTagRepository.update(existing);
 
                 System.out.println("Updated database entry with ID: " + updated.getId());
@@ -161,7 +164,10 @@ public class WriteTagsToLocalDbCommand implements Runnable {
                     imageInfo.thumbnailName(),
                     imageInfo.shortTitle(),
                     imageInfo.isText(),
-                    imageInfo.textContents()
+                    imageInfo.textContents(),
+                    imageInfo.gpsLatitude(),
+                    imageInfo.gpsLongitude(),
+                    imageInfo.imageTakenAt()
                 );
                 printImageInfoResults(imageInfo, startTime);
             }
