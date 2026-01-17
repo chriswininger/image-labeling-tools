@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAppSelector } from '../../store/hooks';
 import type { ImageData } from '../../types/electron';
 import "./ImageThumbnail.css"
 
@@ -9,6 +10,7 @@ interface ImageThumbnailProps {
 }
 
 function ImageThumbnail({ image, onTagClick, onClick }: ImageThumbnailProps) {
+  const showTags = useAppSelector((state) => state.gallery.showTagsInGallery);
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,7 +67,7 @@ function ImageThumbnail({ image, onTagClick, onClick }: ImageThumbnailProps) {
       ) : (
         <div className="thumbnail-loading">Loading...</div>
       )}
-      {tags.length > 0 && (
+      {showTags && tags.length > 0 && (
         <div className="thumbnail-info">
           <div className="thumbnail-tags">
             {tags.map((tag, index) => (

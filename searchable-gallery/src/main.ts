@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, protocol, Menu, MenuItemConstructorOptions } from 'electron';
 import path from 'node:path';
 import fs from 'fs';
 import started from 'electron-squirrel-startup';
@@ -15,6 +15,10 @@ if (started) {
 }
 
 let db: any = null;
+let mainWindow: BrowserWindow | null = null;
+
+// Preferences state
+let showTagsInGallery = true;
 
 // Register custom protocol for serving local images
 // This must be called before app.whenReady() - called at module load time
@@ -278,9 +282,85 @@ ipcMain.handle('get-image-data', async (event, imagePath: string) => {
   }
 });
 
+// Create the application menu
+const createMenu = () => {
+  const template: MenuItemConstructorOptions[] = [
+    {
+      label: 'File',
+      submenu: [
+        {
+          label: 'Preferences',
+          submenu: [
+            {
+              label: 'Show Tags In Gallery',
+              type: 'checkbox',
+              checked: showTagsInGallery,
+              click: (menuItem) => {
+                showTagsInGallery = menuItem.checked;
+                // Send preference change to renderer
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('preference-changed', {
+                    key: 'showTagsInGallery',
+                    value: showTagsInGallery,
+                  });
+                }
+              },
+            },
+          ],
+        },
+        { type: 'separator' },
+        { role: 'quit' },
+      ],
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' },
+      ],
+    },
+    {
+      label: 'View',
+      submenu: [
+        { role: 'reload' },
+        { role: 'forceReload' },
+        { role: 'toggleDevTools' },
+        { type: 'separator' },
+        { role: 'resetZoom' },
+        { role: 'zoomIn' },
+        { role: 'zoomOut' },
+        { type: 'separator' },
+        { role: 'togglefullscreen' },
+      ],
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'close' },
+      ],
+    },
+  ];
+
+  const menu = Menu.buildFromTemplate(template);
+  Menu.setApplicationMenu(menu);
+};
+
+// IPC handler to get current preferences
+ipcMain.handle('get-preferences', async () => {
+  return {
+    showTagsInGallery,
+  };
+});
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     webPreferences: {
@@ -301,6 +381,11 @@ const createWindow = () => {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
+
+  // Clean up reference when window is closed
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
 };
 
 // This method will be called when Electron has finished
@@ -312,6 +397,7 @@ app.whenReady().then(async () => {
   if (!db) {
     console.error('⚠️  Warning: Database not initialized. Some features may not work.');
   }
+  createMenu();
   createWindow();
 });
 

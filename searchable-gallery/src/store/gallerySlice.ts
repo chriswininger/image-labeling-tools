@@ -8,6 +8,7 @@ interface GalleryState {
   tagsStatus: 'idle' | 'loading' | 'succeeded' | 'failed';
   error: string | null;
   tagsError: string | null;
+  showTagsInGallery: boolean;
 }
 
 const initialState: GalleryState = {
@@ -17,6 +18,7 @@ const initialState: GalleryState = {
   tagsStatus: 'idle',
   error: null,
   tagsError: null,
+  showTagsInGallery: true,
 };
 
 export const fetchAllImages = createAsyncThunk(
@@ -44,7 +46,11 @@ export const fetchAllTags = createAsyncThunk(
 const gallerySlice = createSlice({
   name: 'gallery',
   initialState,
-  reducers: {},
+  reducers: {
+    setShowTagsInGallery: (state, action: PayloadAction<boolean>) => {
+      state.showTagsInGallery = action.payload;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchAllImages.pending, (state) => {
@@ -74,5 +80,6 @@ const gallerySlice = createSlice({
   },
 });
 
+export const { setShowTagsInGallery } = gallerySlice.actions;
 export default gallerySlice.reducer;
 

@@ -10,4 +10,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAllTags: () => ipcRenderer.invoke('get-all-tags'),
   getImageData: (imagePath: string) => ipcRenderer.invoke('get-image-data', imagePath),
   getThumbnailPath: (thumbnailName: string) => ipcRenderer.invoke('get-thumbnail-path', thumbnailName),
+  getPreferences: () => ipcRenderer.invoke('get-preferences'),
+  onPreferenceChanged: (callback: (preference: { key: string; value: unknown }) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, preference: { key: string; value: unknown }) => {
+      callback(preference);
+    };
+    ipcRenderer.on('preference-changed', listener);
+    // Return a cleanup function
+    return () => {
+      ipcRenderer.removeListener('preference-changed', listener);
+    };
+  },
 });

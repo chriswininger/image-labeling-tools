@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { fetchAllImages, fetchAllTags } from '../../store/gallerySlice';
+import { fetchAllImages, fetchAllTags, setShowTagsInGallery } from '../../store/gallerySlice';
 import ImageThumbnail from '../ImageThumbnail/ImageThumbnail';
 import ImageModal from '../ImageModal/ImageModal';
 import MultiSelect, { MultiSelectOption } from '../MultiSelect/MultiSelect';
@@ -13,6 +13,23 @@ function Gallery() {
   const [selectedValues, setSelectedValues] = useState<string[]>([]);
   const [joinType, setJoinType] = useState<'and' | 'or'>('and');
   const [selectedImage, setSelectedImage] = useState<ImageData | null>(null);
+
+  // Load initial preferences and listen for changes
+  useEffect(() => {
+    // Load initial preferences
+    window.electronAPI.getPreferences().then((prefs) => {
+      dispatch(setShowTagsInGallery(prefs.showTagsInGallery));
+    });
+
+    // Listen for preference changes from menu
+    const cleanup = window.electronAPI.onPreferenceChanged((preference) => {
+      if (preference.key === 'showTagsInGallery') {
+        dispatch(setShowTagsInGallery(preference.value as boolean));
+      }
+    });
+
+    return cleanup;
+  }, [dispatch]);
 
   // Load images; fires again if filter options change
   useEffect(() => {

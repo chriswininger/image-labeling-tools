@@ -10,11 +10,22 @@ export interface ImageFilterOptions {
   joinType?: 'and' | 'or';
 }
 
+export interface Preferences {
+  showTagsInGallery: boolean;
+}
+
+export interface PreferenceChange {
+  key: string;
+  value: unknown;
+}
+
 export interface ElectronAPI {
   getAllImages: (filterOptions?: ImageFilterOptions) => Promise<ImageData[]>;
   getAllTags: () => Promise<TagData[]>;
   getImageData: (imagePath: string) => Promise<string>;
   getThumbnailPath: (thumbnailName: string) => Promise<string>;
+  getPreferences: () => Promise<Preferences>;
+  onPreferenceChanged: (callback: (preference: PreferenceChange) => void) => () => void;
 }
 
 export interface ImageData {
