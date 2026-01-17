@@ -16,5 +16,9 @@ public record ImageInfo(
     // metadata extracted from file EXIF data
     Double gpsLatitude,
     Double gpsLongitude,
-    Date imageTakenAt
+    Date imageTakenAt,
+
+    // filesystem timestamps
+    Date fileCreatedAt,
+    Date fileLastModified
 ) { }

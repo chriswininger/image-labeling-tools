@@ -26,9 +26,11 @@ public class ImageInfoRepository {
         final String textContents,
         final Double gpsLatitude,
         final Double gpsLongitude,
-        final Date imageTakenAt
+        final Date imageTakenAt,
+        final Date fileCreatedAt,
+        final Date fileLastModified
     ) {
-        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText, textContents, gpsLatitude, gpsLongitude, imageTakenAt);
+        final ImageInfoEntity entity = new ImageInfoEntity(fullPath, description, tags, thumbnailName, shortTitle, isText, textContents, gpsLatitude, gpsLongitude, imageTakenAt, fileCreatedAt, fileLastModified);
         // ID will be generated in @PrePersist callback
         entityManager.persist(entity);
         return entity;

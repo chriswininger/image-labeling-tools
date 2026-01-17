@@ -33,6 +33,8 @@ import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getCreatedOn;
+import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getFileCreatedAt;
+import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getFileLastModified;
 import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getGeoLocation;
 import static com.wininger.cli_image_labeler.image.tagging.utils.ImageUtils.*;
 import static java.util.Objects.isNull;
@@ -133,6 +135,19 @@ public class ImageInfoService
       System.err.println("Warning: Could not extract date taken from " + imagePath + ": " + e.getMessage());
     }
 
+    // Step 4: Extract filesystem timestamps
+    Date fileCreatedAt = null;
+    Date fileLastModified = null;
+
+    try {
+      fileCreatedAt = getFileCreatedAt(imagePath);
+      fileLastModified = getFileLastModified(imagePath);
+      System.out.println("File created at: " + fileCreatedAt);
+      System.out.println("File last modified: " + fileLastModified);
+    } catch (Exception e) {
+      System.err.println("Warning: Could not extract file timestamps from " + imagePath + ": " + e.getMessage());
+    }
+
     if (keepThumbnails) {
       // Save thumbnail to archive
       final byte[] imageBytesForThumbnail;
@@ -159,7 +174,9 @@ public class ImageInfoService
         thumbnailName,
         gpsLatitude,
         gpsLongitude,
-        imageTakenAt
+        imageTakenAt,
+        fileCreatedAt,
+        fileLastModified
     );
   }
 

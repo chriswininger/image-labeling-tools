@@ -61,6 +61,14 @@ public class ImageInfoEntity {
     @jakarta.persistence.Temporal(jakarta.persistence.TemporalType.TIMESTAMP)
     private Date imageTakenAt;
 
+    @Column(name = "file_created_at")
+    @jakarta.persistence.Temporal(jakarta.persistence.TemporalType.TIMESTAMP)
+    private Date fileCreatedAt;
+
+    @Column(name = "file_last_modified")
+    @jakarta.persistence.Temporal(jakarta.persistence.TemporalType.TIMESTAMP)
+    private Date fileLastModified;
+
     @Column(nullable = false, name = "created_at")
     @jakarta.persistence.Convert(converter = LocalDateTimeConverter.class)
     private LocalDateTime createdAt;
@@ -83,7 +91,9 @@ public class ImageInfoEntity {
       String textContents,
       Double gpsLatitude,
       Double gpsLongitude,
-      Date imageTakenAt
+      Date imageTakenAt,
+      Date fileCreatedAt,
+      Date fileLastModified
     ) {
         this.fullPath = fullPath;
         this.description = description;
@@ -95,6 +105,8 @@ public class ImageInfoEntity {
         this.gpsLatitude = gpsLatitude;
         this.gpsLongitude = gpsLongitude;
         this.imageTakenAt = imageTakenAt;
+        this.fileCreatedAt = fileCreatedAt;
+        this.fileLastModified = fileLastModified;
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
@@ -215,6 +227,22 @@ public class ImageInfoEntity {
 
     public void setImageTakenAt(Date imageTakenAt) {
         this.imageTakenAt = imageTakenAt;
+    }
+
+    public Date getFileCreatedAt() {
+        return fileCreatedAt;
+    }
+
+    public void setFileCreatedAt(Date fileCreatedAt) {
+        this.fileCreatedAt = fileCreatedAt;
+    }
+
+    public Date getFileLastModified() {
+        return fileLastModified;
+    }
+
+    public void setFileLastModified(Date fileLastModified) {
+        this.fileLastModified = fileLastModified;
     }
 }
 

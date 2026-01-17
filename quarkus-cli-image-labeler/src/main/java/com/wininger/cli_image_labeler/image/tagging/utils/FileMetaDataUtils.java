@@ -2,6 +2,9 @@ package com.wininger.cli_image_labeler.image.tagging.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,4 +54,24 @@ public class FileMetaDataUtils
         return null;
       }
     }
+
+  /**
+   * Gets the file creation time from the filesystem.
+   * Note: On some filesystems (e.g., ext3), creation time may not be available
+   * and will return the same value as last modified time.
+   */
+  public static Date getFileCreatedAt(final String filePath) throws IOException {
+    final Path path = Path.of(filePath);
+    final BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+    return new Date(attrs.creationTime().toMillis());
+  }
+
+  /**
+   * Gets the last modified time from the filesystem.
+   */
+  public static Date getFileLastModified(final String filePath) throws IOException {
+    final Path path = Path.of(filePath);
+    final BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+    return new Date(attrs.lastModifiedTime().toMillis());
+  }
 }
