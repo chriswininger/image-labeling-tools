@@ -21,6 +21,7 @@ import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteExcepti
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
 import dev.langchain4j.model.chat.request.ResponseFormatType;
@@ -242,6 +243,7 @@ public class ImageInfoService
       }
       final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
         .chatModel(imageInfoFromDescriptionModel)
+        .chatMemory(MessageWindowChatMemory.withMaxMessages(1))
         .build();
 
       final var result = service.extractImageInfoFromDetailedImageDescription(detailedDescription);
@@ -322,6 +324,7 @@ public class ImageInfoService
     return chatResponse.aiMessage().text();
   }
 
+  // TODO -- split tags with spaces so that tags like 'animal portrait' become 'animal', 'portrait'
   private List<String> normalizeTags(final ImageInfoFromDescriptionModelResponse modelResponse, final boolean isText) {
     // should have already checked this by now, but just in case :-)
     if (isNull(modelResponse.tags())) {
