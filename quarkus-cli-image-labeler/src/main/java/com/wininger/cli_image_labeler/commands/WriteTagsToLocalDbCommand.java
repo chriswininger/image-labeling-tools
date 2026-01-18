@@ -56,7 +56,6 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     }
 
     @Override
-    @ActivateRequestContext
     public void run() {
         final long startTime = System.currentTimeMillis();
         final String failLogName = "failed-image-processing-%s.log".formatted(startTime);
@@ -117,68 +116,85 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             final String fullPath = imagePath.toAbsolutePath().toString();
             System.out.println("\n=== Processing: " + fullPath + " ===");
 
-            // Check if image already exists in database
-            final ImageInfoEntity existing = imageTagRepository.findByFullPath(fullPath);
+            // Check if image already exists in database (requires request context)
+            final ImageInfoEntity existing = findExistingImage(fullPath);
+            if (existing != null && !updateExisting) {
+                System.out.println("Image already exists in database, skipping...");
+                return;
+            }
             if (existing != null) {
-                if (updateExisting) {
-                    System.out.println("Image already exists in database, updating...");
-                } else {
-                    System.out.println("Image already exists in database, skipping...");
-                    return;
-                }
+                System.out.println("Image already exists in database, updating...");
             }
 
-            // Generate image info (always generate thumbnail when updating existing entries)
+            // Generate image info - this calls AI services and should NOT be in request context
             final ImageInfo imageInfo = imageInfoService.generateImageInfoAndMetadata(fullPath, true);
 
             if (Objects.isNull(imageInfo.tags())) {
                 throw new RuntimeException("Null tags were returned");
             }
 
-            // Upsert all tags into the tags table and collect TagEntity objects
-            final List<TagEntity> tagEntities = imageInfo.tags().stream()
-                .map(tagRepository::upsertTag)
-                .collect(Collectors.toList());
+            // Save to database (requires request context)
+            saveImageToDatabase(fullPath, imageInfo, existing, startTime);
 
-            if (existing != null) {
-                // Update existing entry
-                existing.setDescription(imageInfo.fullDescription());
-                existing.setTags(tagEntities);
-                existing.setThumbnailName(imageInfo.thumbnailName());
-                existing.setShortTitle(imageInfo.shortTitle());
-                existing.setIsText(imageInfo.isText());
-                existing.setTextContents(imageInfo.textContents());
-                existing.setGpsLatitude(imageInfo.gpsLatitude());
-                existing.setGpsLongitude(imageInfo.gpsLongitude());
-                existing.setImageTakenAt(imageInfo.imageTakenAt());
-                existing.setFileCreatedAt(imageInfo.fileCreatedAt());
-                existing.setFileLastModified(imageInfo.fileLastModified());
-                final ImageInfoEntity updated = imageTagRepository.update(existing);
-
-                System.out.println("Updated database entry with ID: " + updated.getId());
-                printImageInfoResults(imageInfo, startTime);
-            } else {
-                // Save new entry to database
-                final ImageInfoEntity saved = imageTagRepository.save(
-                    fullPath,
-                    imageInfo.fullDescription(),
-                    tagEntities,
-                    imageInfo.thumbnailName(),
-                    imageInfo.shortTitle(),
-                    imageInfo.isText(),
-                    imageInfo.textContents(),
-                    imageInfo.gpsLatitude(),
-                    imageInfo.gpsLongitude(),
-                    imageInfo.imageTakenAt(),
-                    imageInfo.fileCreatedAt(),
-                    imageInfo.fileLastModified()
-                );
-                printImageInfoResults(imageInfo, startTime);
-            }
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
             writeFailedImageProcess(imagePath, failLogName, e);
-          // Continue processing other images even if one fails
+            // Continue processing other images even if one fails
+        }
+    }
+
+    @ActivateRequestContext
+    ImageInfoEntity findExistingImage(final String fullPath) {
+        return imageTagRepository.findByFullPath(fullPath);
+    }
+
+    @ActivateRequestContext
+    void saveImageToDatabase(final String fullPath, final ImageInfo imageInfo,
+                             final ImageInfoEntity existingFromPreviousContext, final long startTime) {
+        // Upsert all tags into the tags table and collect TagEntity objects
+        final List<TagEntity> tagEntities = imageInfo.tags().stream()
+            .map(tagRepository::upsertTag)
+            .collect(Collectors.toList());
+
+        // Re-fetch the existing entity within this request context to avoid detached entity issues
+        final ImageInfoEntity existing = existingFromPreviousContext != null
+            ? imageTagRepository.findByFullPath(fullPath)
+            : null;
+
+        if (existing != null) {
+            // Update existing entry
+            existing.setDescription(imageInfo.fullDescription());
+            existing.setTags(tagEntities);
+            existing.setThumbnailName(imageInfo.thumbnailName());
+            existing.setShortTitle(imageInfo.shortTitle());
+            existing.setIsText(imageInfo.isText());
+            existing.setTextContents(imageInfo.textContents());
+            existing.setGpsLatitude(imageInfo.gpsLatitude());
+            existing.setGpsLongitude(imageInfo.gpsLongitude());
+            existing.setImageTakenAt(imageInfo.imageTakenAt());
+            existing.setFileCreatedAt(imageInfo.fileCreatedAt());
+            existing.setFileLastModified(imageInfo.fileLastModified());
+            final ImageInfoEntity updated = imageTagRepository.update(existing);
+
+            System.out.println("Updated database entry with ID: " + updated.getId());
+            printImageInfoResults(imageInfo, startTime);
+        } else {
+            // Save new entry to database
+            imageTagRepository.save(
+                fullPath,
+                imageInfo.fullDescription(),
+                tagEntities,
+                imageInfo.thumbnailName(),
+                imageInfo.shortTitle(),
+                imageInfo.isText(),
+                imageInfo.textContents(),
+                imageInfo.gpsLatitude(),
+                imageInfo.gpsLongitude(),
+                imageInfo.imageTakenAt(),
+                imageInfo.fileCreatedAt(),
+                imageInfo.fileLastModified()
+            );
+            printImageInfoResults(imageInfo, startTime);
         }
     }
 

@@ -21,6 +21,7 @@ import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteExcepti
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
@@ -102,7 +103,6 @@ public class ImageInfoService
     System.out.println("Getting unstructured description from vision model...");
     final String detailedDescription = getUnstructuredDescription(imageContent);
     System.out.println("Detailed description received: " + detailedDescription.substring(0, Math.min(100, detailedDescription.length())) + "...");
-
 
     // Step 2: Extract structured fields from the description
     System.out.println("Extracting structured info from description...");
@@ -242,13 +242,14 @@ public class ImageInfoService
         System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
       }
       final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
-        .chatModel(imageInfoFromDescriptionModel)
+        .chatModel(getMultiModalModel(ImageInfoFromDescriptionModelResponse.class))
         .chatMemory(MessageWindowChatMemory.withMaxMessages(1))
         .build();
 
       final var result = service.extractImageInfoFromDetailedImageDescription(detailedDescription);
 
-      if (nonNull(result.tags()) &&
+      if (nonNull(result) &&
+        nonNull(result.tags()) &&
         nonNull(result.fullDescription()) &&
         nonNull(result.shortTitle()) &&
         nonNull(result.doesContainText())) {
