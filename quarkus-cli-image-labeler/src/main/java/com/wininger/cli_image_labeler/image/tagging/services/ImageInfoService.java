@@ -66,6 +66,8 @@ public class ImageInfoService
 
   private final SimilarityService similarityService;
 
+  private final ImageInfoFromDescriptionService imageInfoFromDescriptionService;
+
   private final boolean logRequests;
 
   private final boolean logResponses;
@@ -81,6 +83,20 @@ public class ImageInfoService
 
     unstructuredModel = getUnstructuredMultiModalModel();
     imageInfoFromDescriptionModel = getMultiModalModel(ImageInfoFromDescriptionModelResponse.class);
+
+    imageInfoFromDescriptionService = AiServices.builder(ImageInfoFromDescriptionService.class)
+        .chatModel(imageInfoFromDescriptionModel)
+        .chatRequestTransformer(req -> {
+          System.out.println("num messages: " + req.messages().size());
+          if (req.messages().size() > 1) {
+            // hopefully this is solved now, but leaving this in place just in case
+            // https://github.com/quarkiverse/quarkus-langchain4j/issues/2071
+            System.out.println("Warning stale messages may be getting sent to the model: " + req.messages().size());
+          }
+
+          return req;
+        })
+        .build();
 
     this.similarityService = similarityService;
   }
@@ -243,21 +259,8 @@ public class ImageInfoService
         System.out.println("Failed to get a valid result from the model for image: " + imagePathForLogging);
         System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
       }
-      final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
-        .chatModel(imageInfoFromDescriptionModel)
-        .chatRequestTransformer(req -> {
-          System.out.println("num messages: " + req.messages().size());
-          if (req.messages().size() > 1) {
-            // hopefully this is solved now, but leaving this in place just in case
-            // https://github.com/quarkiverse/quarkus-langchain4j/issues/2071
-            System.out.println("Warning stale messages may be getting sent to the model: " + req.messages().size());
-          }
 
-          return req;
-        })
-        .build();
-
-      final var result = service.extractImageInfoFromDetailedImageDescription(detailedDescription);
+      final var result = imageInfoFromDescriptionService.extractImageInfoFromDetailedImageDescription(detailedDescription);
 
       if (nonNull(result) &&
         nonNull(result.tags()) &&
