@@ -18,9 +18,11 @@ import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInf
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageReadException;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteException;
+import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.memory.ChatMemory;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
@@ -242,8 +244,24 @@ public class ImageInfoService
         System.out.printf("Trying again %s/%s%n", numbTimesTried + 1, NUM_MODEL_RETRIES);
       }
       final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
-        .chatModel(getMultiModalModel(ImageInfoFromDescriptionModelResponse.class))
-        .chatMemory(MessageWindowChatMemory.withMaxMessages(1))
+        .chatModel(imageInfoFromDescriptionModel)
+        .chatRequestTransformer(req -> {
+          if (req.messages().size() <= 2) {
+            return req;
+          }
+
+          // work around for https://github.com/langchain4j/langchain4j/issues/4446
+          System.out.println("dropping stale messages, keeping only last 2");
+          List<ChatMessage> trimmedMessages = req.messages().subList(
+              req.messages().size() - 2,
+              req.messages().size()
+          );
+
+          return ChatRequest.builder()
+              .messages(trimmedMessages)
+              .parameters(req.parameters())
+              .build();
+        })
         .build();
 
       final var result = service.extractImageInfoFromDetailedImageDescription(detailedDescription);
@@ -288,12 +306,10 @@ public class ImageInfoService
 
     return OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
-        //.numCtx(8192) // rather than default 4096, can go up to 128k for gemma3:4b
         .baseUrl("http://localhost:11434/")
         .responseFormat(responseFormat)
         .logRequests(logRequests)
         .logResponses(logResponses)
-        //.temperature(0.9D)
         .build();
   }
 
