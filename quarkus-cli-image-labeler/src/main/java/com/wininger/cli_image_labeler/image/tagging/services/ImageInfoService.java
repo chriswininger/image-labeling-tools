@@ -246,21 +246,14 @@ public class ImageInfoService
       final ImageInfoFromDescriptionService service = AiServices.builder(ImageInfoFromDescriptionService.class)
         .chatModel(imageInfoFromDescriptionModel)
         .chatRequestTransformer(req -> {
-          if (req.messages().size() <= 2) {
-            return req;
+          System.out.println("num messages: " + req.messages().size());
+          if (req.messages().size() > 1) {
+            // hopefully this is solved now, but leaving this in place just in case
+            // https://github.com/quarkiverse/quarkus-langchain4j/issues/2071
+            System.out.println("Warning stale messages may be getting sent to the model: " + req.messages().size());
           }
 
-          // work around for https://github.com/langchain4j/langchain4j/issues/4446
-          System.out.println("dropping stale messages, keeping only last 2");
-          List<ChatMessage> trimmedMessages = req.messages().subList(
-              req.messages().size() - 2,
-              req.messages().size()
-          );
-
-          return ChatRequest.builder()
-              .messages(trimmedMessages)
-              .parameters(req.parameters())
-              .build();
+          return req;
         })
         .build();
 
