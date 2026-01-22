@@ -2,19 +2,14 @@ import { app, BrowserWindow, ipcMain, protocol, Menu, MenuItemConstructorOptions
 import path from 'node:path';
 import fs from 'fs';
 import started from 'electron-squirrel-startup';
-
-// Lazy load better-sqlite3 to avoid bundling issues with Vite
-const loadDatabase = () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('better-sqlite3');
-};
+import { loadDatabase, getDb, setDb, closeDb } from './shared/database';
+import { getAllImages, getAllTags, getThumbnailPath, getImageData } from './fetch-handlers';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
 }
 
-let db: any = null;
 let mainWindow: BrowserWindow | null = null;
 
 // Preferences state
@@ -67,7 +62,7 @@ const initDatabase = () => {
       if (fs.existsSync(normalizedPath)) {
         console.log(`Database file exists at: ${normalizedPath}`);
         const DB = loadDatabase();
-        db = new DB(normalizedPath);
+        setDb(new DB(normalizedPath));
         console.log('✅ Database connected successfully at:', normalizedPath);
         return;
       } else {
@@ -112,175 +107,10 @@ const registerImageProtocol = () => {
 };
 
 // IPC handlers for database operations
-ipcMain.handle('get-all-images', async (event, filterOptions?: { tags?: string[]; joinType?: 'and' | 'or' }) => {
-  if (!db) {
-    throw new Error('Database not initialized');
-  }
-
-  try {
-    const params: any[] = [];
-    let query: string;
-
-    // Apply tag filtering if tags are provided
-    if (filterOptions?.tags && filterOptions.tags.length > 0) {
-      const joinType = filterOptions.joinType || 'or';
-      
-      // Add tag names as parameters
-      filterOptions.tags.forEach(tag => {
-        params.push(tag.trim());
-      });
-
-      if (joinType === 'and') {
-        // For AND: images must have ALL the specified tags
-        // Use a subquery to filter images that have all tags, then join to get tag aggregation
-        query = `
-          SELECT 
-            ii.id, 
-            ii.full_path, 
-            ii.description,
-            ii.short_title,
-            COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
-            ii.thumb_nail_name,
-            ii.text_contents,
-            ii.created_at, 
-            ii.updated_at 
-          FROM image_info ii
-          INNER JOIN (
-            SELECT iitj_filter.image_info_id
-            FROM image_info_tag_join iitj_filter
-            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-            GROUP BY iitj_filter.image_info_id
-            HAVING COUNT(DISTINCT t_filter.tag_name) = ?
-          ) filtered ON ii.id = filtered.image_info_id
-          LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
-          LEFT JOIN tags t ON iitj.tag_id = t.id
-          GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.text_contents, ii.created_at, ii.updated_at
-        `;
-        params.push(filterOptions.tags.length);
-      } else {
-        // For OR: images must have AT LEAST ONE of the specified tags
-        // Use a subquery to filter images, then join to get all tags for those images
-        query = `
-          SELECT 
-            ii.id, 
-            ii.full_path, 
-            ii.description,
-            ii.short_title,
-            COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
-            ii.thumb_nail_name,
-            ii.text_contents,
-            ii.created_at, 
-            ii.updated_at 
-          FROM image_info ii
-          INNER JOIN (
-            SELECT DISTINCT iitj_filter.image_info_id
-            FROM image_info_tag_join iitj_filter
-            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-          ) filtered ON ii.id = filtered.image_info_id
-          LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
-          LEFT JOIN tags t ON iitj.tag_id = t.id
-          GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.text_contents, ii.created_at, ii.updated_at
-        `;
-      }
-    } else {
-      // No filtering: get all images with their tags aggregated
-      query = `
-        SELECT 
-          ii.id, 
-          ii.full_path, 
-          ii.description,
-          ii.short_title,
-          COALESCE(GROUP_CONCAT(t.tag_name, ', '), '') as tags,
-          ii.thumb_nail_name,
-          ii.text_contents,
-          ii.created_at, 
-          ii.updated_at 
-        FROM image_info ii
-        LEFT JOIN image_info_tag_join iitj ON ii.id = iitj.image_info_id
-        LEFT JOIN tags t ON iitj.tag_id = t.id
-        GROUP BY ii.id, ii.full_path, ii.description, ii.short_title, ii.thumb_nail_name, ii.text_contents, ii.created_at, ii.updated_at
-      `;
-    }
-
-    query += ' ORDER BY ii.created_at DESC';
-
-    console.log('run query: ', query);
-    console.log('params: ', params);
-    const stmt = db.prepare(query);
-    const images = stmt.all(...params);
-    return images;
-  } catch (error) {
-    console.error('Error fetching images:', error);
-    throw error;
-  }
-});
-
-// IPC handler to get all tags
-ipcMain.handle('get-all-tags', async () => {
-  if (!db) {
-    throw new Error('Database not initialized');
-  }
-
-  try {
-    const stmt = db.prepare('SELECT id, tag_name, created_at, updated_at FROM tags ORDER BY tag_name ASC');
-
-    return stmt.all();
-  } catch (error) {
-    console.error('Error fetching tags:', error);
-    throw error;
-  }
-});
-
-// IPC handler to get thumbnail path
-ipcMain.handle('get-thumbnail-path', async (event, thumbnailName: string) => {
-  // Try multiple possible paths for the thumbnail directory (similar to database path resolution)
-  const appPath = app.getAppPath();
-  const possiblePaths = [
-    path.join(appPath, 'data', 'thumbnails', thumbnailName),
-    path.join(__dirname, '..', '..', 'data', 'thumbnails', thumbnailName),
-    path.join(__dirname, '..', 'data', 'thumbnails', thumbnailName),
-    path.resolve(__dirname, '..', '..', '..', 'data', 'thumbnails', thumbnailName),
-    path.join(process.resourcesPath || __dirname, 'data', 'thumbnails', thumbnailName),
-    path.join(app.getPath('userData'), 'data', 'thumbnails', thumbnailName),
-  ];
-
-  for (const thumbPath of possiblePaths) {
-    const normalizedPath = path.normalize(thumbPath);
-    if (fs.existsSync(normalizedPath)) {
-      return normalizedPath;
-    }
-  }
-
-  throw new Error(`Thumbnail not found: ${thumbnailName}`);
-});
-
-// IPC handler to get image as data URL
-ipcMain.handle('get-image-data', async (event, imagePath: string) => {
-  try {
-    if (!fs.existsSync(imagePath)) {
-      throw new Error(`Image file not found: ${imagePath}`);
-    }
-
-    // Read the image file and convert to base64
-    const imageBuffer = fs.readFileSync(imagePath);
-    const base64 = imageBuffer.toString('base64');
-
-    // Determine MIME type from file extension
-    const ext = path.extname(imagePath).toLowerCase();
-    let mimeType = 'image/jpeg'; // default
-    if (ext === '.png') mimeType = 'image/png';
-    else if (ext === '.gif') mimeType = 'image/gif';
-    else if (ext === '.webp') mimeType = 'image/webp';
-    else if (ext === '.bmp') mimeType = 'image/bmp';
-
-    return `data:${mimeType};base64,${base64}`;
-  } catch (error) {
-    console.error('Error reading image:', error);
-    throw error;
-  }
-});
+ipcMain.handle('get-all-images', getAllImages);
+ipcMain.handle('get-all-tags', getAllTags);
+ipcMain.handle('get-thumbnail-path', getThumbnailPath);
+ipcMain.handle('get-image-data', getImageData);
 
 // Create the application menu
 const createMenu = () => {
@@ -394,7 +224,7 @@ const createWindow = () => {
 app.whenReady().then(async () => {
   registerImageProtocol();
   await initDatabase();
-  if (!db) {
+  if (!getDb()) {
     console.error('⚠️  Warning: Database not initialized. Some features may not work.');
   }
   createMenu();
@@ -405,9 +235,7 @@ app.whenReady().then(async () => {
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
 app.on('window-all-closed', () => {
-  if (db) {
-    db.close();
-  }
+  closeDb();
   if (process.platform !== 'darwin') {
     app.quit();
   }
