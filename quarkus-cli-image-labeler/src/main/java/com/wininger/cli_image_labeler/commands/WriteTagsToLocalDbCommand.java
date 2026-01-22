@@ -30,8 +30,8 @@ import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.prin
 
 @Command(name = "write-tags-to-local-db", mixinStandardHelpOptions = true)
 public class WriteTagsToLocalDbCommand implements Runnable {
-    @Parameters(paramLabel = "<directory-path>", description = "The path to a directory containing images to process and save to database")
-    String directoryPath;
+    @Parameters(paramLabel = "<path>", description = "The path to an image or directory containing images to process and save to database")
+    String inputPath;
 
     @Option(names = "--update-existing", description = "Update existing database entries and regenerate thumbnails")
     boolean updateExisting;
@@ -60,17 +60,28 @@ public class WriteTagsToLocalDbCommand implements Runnable {
         final long startTime = System.currentTimeMillis();
         final String failLogName = "failed-image-processing-%s.log".formatted(startTime);
 
-        final Path directory = Paths.get(directoryPath);
-        if (!Files.exists(directory)) {
-            System.err.println("Error: Directory does not exist: " + directoryPath);
+        final Path path = Paths.get(inputPath);
+        if (!Files.exists(path)) {
+            System.err.println("Error: Path does not exist: " + inputPath);
             return;
         }
 
-        if (!Files.isDirectory(directory)) {
-            System.err.println("Error: Path is not a directory: " + directoryPath);
-            return;
+        if (Files.isDirectory(path)) {
+            processDirectory(path, failLogName, startTime);
+        } else if (Files.isRegularFile(path)) {
+            if (isImageFile(path)) {
+                processImage(path, failLogName);
+                System.out.printf("\n\nCompleted processing image in: %s",
+                    getTimeTakenMessage(startTime, System.currentTimeMillis()));
+            } else {
+                System.err.println("Error: File is not a supported image type: " + inputPath);
+            }
+        } else {
+            System.err.println("Error: Path is neither a file nor a directory: " + inputPath);
         }
+    }
 
+    private void processDirectory(final Path directory, final String failLogName, final long startTime) {
         try (Stream<Path> paths = Files.walk(directory)) {
             final long totalImages = paths
                 .filter(Files::isRegularFile)
@@ -95,8 +106,8 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             throw new RuntimeException("Failed to process directory", e);
         }
 
-      System.out.printf("\n\nCompleted processing all images in: %s",
-          getTimeTakenMessage(startTime, System.currentTimeMillis()));
+        System.out.printf("\n\nCompleted processing all images in: %s",
+            getTimeTakenMessage(startTime, System.currentTimeMillis()));
     }
 
     private boolean isImageFile(final Path path) {
