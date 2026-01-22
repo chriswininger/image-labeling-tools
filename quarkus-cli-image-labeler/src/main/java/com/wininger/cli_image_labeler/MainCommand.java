@@ -1,7 +1,6 @@
 package com.wininger.cli_image_labeler;
 
 import com.wininger.cli_image_labeler.commands.GenerateImageTagsCommand;
-import com.wininger.cli_image_labeler.commands.GenerateImageTagsForDirectoryCommand;
 import com.wininger.cli_image_labeler.commands.RandomizeGpsCoordinatesCommand;
 import com.wininger.cli_image_labeler.commands.ReadFileMetadataCommand;
 import com.wininger.cli_image_labeler.commands.RunMigrationsCommand;
@@ -14,7 +13,6 @@ import picocli.CommandLine.Command;
 @Command(name = "app", mixinStandardHelpOptions = true,
          subcommands = {
              GenerateImageTagsCommand.class,
-             GenerateImageTagsForDirectoryCommand.class,
              RandomizeGpsCoordinatesCommand.class,
              ReadFileMetadataCommand.class,
              RunMigrationsCommand.class,
