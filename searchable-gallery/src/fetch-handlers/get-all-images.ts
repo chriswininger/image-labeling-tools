@@ -1,4 +1,5 @@
-import { getDb } from '../shared/database';
+import {getDb} from '../shared/database';
+import {isNullOrUndefined} from "../utils";
 
 interface FilterOptions {
   tags?: string[];
@@ -21,14 +22,6 @@ interface ImageTagRow {
   tag_name: string;
 }
 
-// Helper to convert BLOB id to string for Map key usage
-function idToString(id: Buffer | string): string {
-  if (Buffer.isBuffer(id)) {
-    return id.toString('hex');
-  }
-  return String(id);
-}
-
 export const getAllImages = async (
   _event: Electron.IpcMainInvokeEvent,
   filterOptions?: FilterOptions
@@ -39,79 +32,7 @@ export const getAllImages = async (
   }
 
   try {
-    const params: (string | number)[] = [];
-    let query: string;
-
-    // Apply tag filtering if tags are provided
-    if (filterOptions?.tags && filterOptions.tags.length > 0) {
-      const joinType = filterOptions.joinType || 'or';
-
-      // Add tag names as parameters
-      filterOptions.tags.forEach((tag) => {
-        params.push(tag.trim());
-      });
-
-      if (joinType === 'and') {
-        // For AND: images must have ALL the specified tags
-        query = `
-          SELECT 
-            ii.id, 
-            ii.full_path, 
-            ii.description,
-            ii.short_title,
-            ii.thumb_nail_name,
-            ii.text_contents,
-            ii.created_at, 
-            ii.updated_at 
-          FROM image_info ii
-          INNER JOIN (
-            SELECT iitj_filter.image_info_id
-            FROM image_info_tag_join iitj_filter
-            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-            GROUP BY iitj_filter.image_info_id
-            HAVING COUNT(DISTINCT t_filter.tag_name) = ?
-          ) filtered ON ii.id = filtered.image_info_id
-        `;
-        params.push(filterOptions.tags.length);
-      } else {
-        // For OR: images must have AT LEAST ONE of the specified tags
-        query = `
-          SELECT 
-            ii.id, 
-            ii.full_path, 
-            ii.description,
-            ii.short_title,
-            ii.thumb_nail_name,
-            ii.text_contents,
-            ii.created_at, 
-            ii.updated_at 
-          FROM image_info ii
-          INNER JOIN (
-            SELECT DISTINCT iitj_filter.image_info_id
-            FROM image_info_tag_join iitj_filter
-            INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-            WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-          ) filtered ON ii.id = filtered.image_info_id
-        `;
-      }
-    } else {
-      // No filtering: get all images
-      query = `
-        SELECT 
-          ii.id, 
-          ii.full_path, 
-          ii.description,
-          ii.short_title,
-          ii.thumb_nail_name,
-          ii.text_contents,
-          ii.created_at, 
-          ii.updated_at 
-        FROM image_info ii
-      `;
-    }
-
-    query += ' ORDER BY ii.created_at DESC';
+    const [query, params] = getBaseQuery(filterOptions);
 
     console.log('run query: ', query);
     console.log('params: ', params);
@@ -147,14 +68,91 @@ export const getAllImages = async (
     }
 
     // Combine images with their tags
-    const imagesWithTags = images.map((image) => ({
+    return images.map((image) => ({
       ...image,
       tags: tagsByImageId.get(idToString(image.id)) || [],
     }));
-
-    return imagesWithTags;
   } catch (error) {
     console.error('Error fetching images:', error);
     throw error;
   }
 };
+
+// Helper to convert BLOB id to string for Map key usage
+function idToString(id: Buffer | string): string {
+  if (Buffer.isBuffer(id)) {
+    return id.toString('hex');
+  }
+  return String(id);
+}
+
+type Parameters = (string | number)[];
+type QueryWithParams = [string, Parameters];
+function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
+  // No filtering: get all images
+  if (isNullOrUndefined(filterOptions?.tags) || filterOptions.tags.length == 0) {
+    return [`
+        SELECT
+            ${getIncludedImageInfoAttributes()}
+        FROM image_info ii
+        ${getOrderByClause()}
+    `, []];
+  }
+
+  // Add tag names as parameters
+  const params: Parameters = filterOptions.tags.map(tag => tag.trim());
+
+  switch (filterOptions.joinType) {
+    // For AND: images must have ALL the specified tags
+    case 'and':
+      // for 'AND' we have to assert that every tag had a match so we include the count as a param
+      // HAVING COUNT(DISTINCT t_filter.tag_name) = ?
+      params.push(filterOptions.tags.length);
+
+      return [`
+          SELECT
+              ${getIncludedImageInfoAttributes()}
+          FROM image_info ii
+                   INNER JOIN (
+              SELECT iitj_filter.image_info_id
+              FROM image_info_tag_join iitj_filter
+                       INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+              WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+              GROUP BY iitj_filter.image_info_id
+              HAVING COUNT(DISTINCT t_filter.tag_name) = ?
+          ) filtered ON ii.id = filtered.image_info_id
+          ${getOrderByClause()}
+      `, params];
+    case 'or':
+      // For OR: images must have AT LEAST ONE of the specified tags
+      return [`
+          SELECT
+              ${getIncludedImageInfoAttributes()}
+          FROM image_info ii
+                   INNER JOIN (
+              SELECT DISTINCT iitj_filter.image_info_id
+              FROM image_info_tag_join iitj_filter
+                       INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
+              WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+          ) filtered ON ii.id = filtered.image_info_id
+          ${getOrderByClause()}
+      `, params];
+  }
+}
+
+function getOrderByClause(): string {
+  return 'ORDER BY ii.created_at DESC';
+}
+
+function getIncludedImageInfoAttributes(): string {
+  return `
+            ii.id,
+            ii.full_path,
+            ii.description,
+            ii.short_title,
+            ii.thumb_nail_name,
+            ii.text_contents,
+            ii.created_at,
+            ii.updated_at
+  `
+}
