@@ -22,7 +22,7 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
     return null;
   }
 
-  const tags = parseTags(image.tags || '');
+  const tags = image.tags || [];
 
   return (
     <div className="image-modal-overlay" onClick={handleOverlayClick}>
@@ -97,16 +97,6 @@ function ImageModal({ image, onClose, onTagClick }: ImageModalProps) {
     if (e.target === e.currentTarget) {
       onClose();
     }
-  }
-
-  function parseTags(tagsString: string): string[] {
-    if (!tagsString || tagsString.trim() === '') {
-      return [];
-    }
-    return tagsString.split(',')
-      .map(tag => tag.trim())
-      .filter(tag => tag.length > 0)
-      .sort();
   }
 
   function getTagColor(tag: string): string {
