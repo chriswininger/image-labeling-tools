@@ -36,6 +36,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 
+import com.wininger.cli_image_labeler.setup.DataDirectoryInitializer;
+
 import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getCreatedOn;
 import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getFileCreatedAt;
 import static com.wininger.cli_image_labeler.image.tagging.utils.FileMetaDataUtils.getFileLastModified;
@@ -234,13 +236,14 @@ public class ImageInfoService
   }
 
   /**
-   * Saves the thumbnail image to the data/thumbnails directory. Uses a hash of the original image path to generate a
-   * unique filename.
+   * Saves the thumbnail image to the thumbnails directory. Uses a hash of the original image path to generate a
+   * unique filename. The thumbnails directory location is determined by IL_DATA_LOCATION env var or defaults to
+   * data/thumbnails.
    */
   private void saveThumbnail(final String imagePath, final byte[] thumbnailBytes) {
     try {
       final String thumbnailFilename = generateThumbnailFilename(imagePath);
-      final Path thumbnailPath = Paths.get("data", "thumbnails", thumbnailFilename);
+      final Path thumbnailPath = DataDirectoryInitializer.getThumbnailsDirectory().resolve(thumbnailFilename);
 
       Files.write(thumbnailPath, thumbnailBytes);
       System.out.println("Thumbnail saved: " + thumbnailPath);

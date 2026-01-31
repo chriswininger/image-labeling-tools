@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import com.wininger.cli_image_labeler.image.tagging.db.TagEntity;
+import com.wininger.cli_image_labeler.setup.DataDirectoryInitializer;
 
 import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.getTimeTakenMessage;
 import static com.wininger.cli_image_labeler.image.tagging.utils.PrintUtils.printImageInfoResults;
@@ -211,13 +212,13 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
   private void writeFailedImageProcess(final Path imagePath, final String failLogName, final Exception exception) {
     try {
-      final Path logFile = Paths.get("data", failLogName);
+      final Path dataDir = DataDirectoryInitializer.getDataDirectory();
+      final Path logFile = dataDir.resolve(failLogName);
       final String fullPath = imagePath.toAbsolutePath().toString();
       final String exceptionClass = exception.getClass().getName();
       final String logEntry = "\"" + fullPath + "\", \"" + exceptionClass + "\"\n";
 
       // Create a data directory if it doesn't exist
-      final Path dataDir = Paths.get("data");
       if (!Files.exists(dataDir)) {
         Files.createDirectories(dataDir);
       }
