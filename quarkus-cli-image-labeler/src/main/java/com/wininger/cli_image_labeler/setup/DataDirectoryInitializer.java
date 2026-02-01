@@ -5,6 +5,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
+/**
+ * Utility class for accessing data directory paths.
+ * 
+ * The data directory location is determined by the IL_DATA_LOCATION environment variable,
+ * falling back to "data" if not set.
+ * 
+ * Note: Directory creation is handled by {@link DataDirectoryConfigSource} which runs
+ * early in the Quarkus startup process, before the datasource is initialized.
+ */
 public class DataDirectoryInitializer {
 
     /**
@@ -19,31 +28,6 @@ public class DataDirectoryInitializer {
 
     private static Path cachedDataDir = null;
 
-    static {
-        // Create directories when class is loaded (before Flyway runs)
-        initializeDirectories();
-    }
-
-    private static void initializeDirectories() {
-        final Path dataDir = getDataDirectory();
-        if (!Files.exists(dataDir)) {
-            try {
-                Files.createDirectories(dataDir);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to create data directory: " + dataDir, e);
-            }
-        }
-
-        final Path thumbnailsDir = getThumbnailsDirectory();
-        if (!Files.exists(thumbnailsDir)) {
-            try {
-                Files.createDirectories(thumbnailsDir);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to create thumbnails directory: " + thumbnailsDir, e);
-            }
-        }
-    }
-
     /**
      * Returns the data directory path, checking the IL_DATA_LOCATION environment variable first.
      * Falls back to "data" if the environment variable is not set.
@@ -55,7 +39,6 @@ public class DataDirectoryInitializer {
             final String envValue = System.getenv(DATA_LOCATION_ENV_VAR);
             if (envValue != null && !envValue.isBlank()) {
                 cachedDataDir = Paths.get(envValue);
-                System.out.println("Using data directory from " + DATA_LOCATION_ENV_VAR + ": " + cachedDataDir);
             } else {
                 cachedDataDir = Paths.get(DEFAULT_DATA_DIR);
             }
@@ -92,9 +75,26 @@ public class DataDirectoryInitializer {
 
     /**
      * Ensures directories exist. Can be called explicitly if needed.
+     * This is a fallback for cases where the ConfigSource hasn't run yet.
      */
     public static void ensureDirectoriesExist() {
-        initializeDirectories();
+        final Path dataDir = getDataDirectory();
+        if (!Files.exists(dataDir)) {
+            try {
+                Files.createDirectories(dataDir);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create data directory: " + dataDir, e);
+            }
+        }
+
+        final Path thumbnailsDir = getThumbnailsDirectory();
+        if (!Files.exists(thumbnailsDir)) {
+            try {
+                Files.createDirectories(thumbnailsDir);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create thumbnails directory: " + thumbnailsDir, e);
+            }
+        }
     }
 }
 

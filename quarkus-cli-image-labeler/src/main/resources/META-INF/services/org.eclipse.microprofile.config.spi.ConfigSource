@@ -1,0 +1,5 @@
+# Custom ConfigSource that creates the data directory (and thumbnails subdirectory)
+# before Flyway/datasource initialization. This ensures SQLite can create the
+# database file even when running from a directory without an existing data folder.
+# Also provides the il.data.directory config property used in application.properties.
+com.wininger.cli_image_labeler.setup.DataDirectoryConfigSource
