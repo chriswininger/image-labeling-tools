@@ -9,4 +9,4 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 IL_DATA_LOCATION="${SCRIPT_DIR}/../searchable-gallery/test-data/" \
-  java -jar "${SCRIPT_DIR}/build/quarkus-app/quarkus-run.jar" run-migrations-command
+  java -jar "${SCRIPT_DIR}/build/quarkus-app/quarkus-run.jar" run-migrations
