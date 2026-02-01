@@ -5,6 +5,8 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.ollama.OllamaEmbeddingModel;
 import dev.langchain4j.store.embedding.CosineSimilarity;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.util.List;
 
@@ -15,15 +17,16 @@ import java.util.List;
 @ApplicationScoped
 public class SimilarityService {
 
-    // TODO: Consider injecting these from application.properties in the future
     private static final String EMBEDDING_MODEL = "nomic-embed-text";
-    private static final String OLLAMA_BASE_URL = "http://localhost:11434/";
 
     private final EmbeddingModel embeddingModel;
 
-    public SimilarityService() {
+    @Inject
+    public SimilarityService(
+        @ConfigProperty(name = "il.ollama.url", defaultValue = "http://localhost:11434/") String ollamaUrl
+    ) {
         this.embeddingModel = OllamaEmbeddingModel.builder()
-            .baseUrl(OLLAMA_BASE_URL)
+            .baseUrl(ollamaUrl)
             .modelName(EMBEDDING_MODEL)
             .build();
     }

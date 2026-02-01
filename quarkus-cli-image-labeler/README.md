@@ -1,8 +1,43 @@
-# quarkus-cli-image-labeler
+quarkus-cli-image-labeler
+===============================
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+
+# Developers
+
+## Building
+
+Quick Build (no tests): `./gradlew build -x test`
+
+## Running Examples
+
+### Populate a SqlLite database with image information for a directory or individual image
+`java -jar ./build/quarkus-app/quarkus-run.jar write-tags-to-local-db ~/Pictures/test-images/`
+
+## Schema Changes
+
+When you make changes to the database schema via migrations in this module, you need to publish those changes to the 
+`searchable-gallery` module for integration testing.
+
+To publish them run `./publish-test-database-for-searchable-gallery.sh`
+
+## Quarkus
+
+This project uses [Quarkus](https://quarkus.io/).
+
+1. First, build the application:
+
+```shell script
+./gradlew build
+```
+
+2. Run the publish script to apply migrations to the test database:
+
+```shell script
+./publish-test-database-for-searchable-gallery.sh
+```
+
+This script runs the migrations against `../searchable-gallery/test-data/` so that the frontend tests use an up-to-date schema.
 
 ## Running the application in dev mode
 

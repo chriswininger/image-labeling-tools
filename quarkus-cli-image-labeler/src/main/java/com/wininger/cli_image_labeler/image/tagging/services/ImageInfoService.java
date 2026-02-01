@@ -74,14 +74,18 @@ public class ImageInfoService
 
   private final boolean logResponses;
 
+  private final String ollamaUrl;
+
   @Inject
   public ImageInfoService(
       @ConfigProperty(name = "ollama.log-requests", defaultValue = "false") boolean logRequests,
       @ConfigProperty(name = "ollama.log-responses", defaultValue = "false") boolean logResponses,
+      @ConfigProperty(name = "il.ollama.url", defaultValue = "http://localhost:11434/") String ollamaUrl,
       final SimilarityService similarityService
   ) {
     this.logRequests = logRequests;
     this.logResponses = logResponses;
+    this.ollamaUrl = ollamaUrl;
 
     unstructuredModel = getUnstructuredMultiModalModel();
     imageInfoFromDescriptionModel = getMultiModalModel(ImageInfoFromDescriptionModelResponse.class);
@@ -286,7 +290,7 @@ public class ImageInfoService
   private String doOCR(final ImageContent imageContent) {
     final ChatModel modelOcr = OllamaChatModel.builder()
         .modelName(OCR_MODEL)
-        .baseUrl("http://localhost:11434/")
+        .baseUrl(ollamaUrl)
         .build();
 
     final TextContent command = TextContent.from("\nExtract the text in the image.");
@@ -305,7 +309,7 @@ public class ImageInfoService
 
     return OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
-        .baseUrl("http://localhost:11434/")
+        .baseUrl(ollamaUrl)
         .responseFormat(responseFormat)
         .logRequests(logRequests)
         .logResponses(logResponses)
@@ -315,7 +319,7 @@ public class ImageInfoService
   private OllamaChatModel getUnstructuredMultiModalModel() {
     return OllamaChatModel.builder()
         .modelName(MULTI_MODAL_MODAL)
-        .baseUrl("http://localhost:11434/")
+        .baseUrl(ollamaUrl)
         .logRequests(logRequests)
         .logResponses(logResponses)
         .build();
