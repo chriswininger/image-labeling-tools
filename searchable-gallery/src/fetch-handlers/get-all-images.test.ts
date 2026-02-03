@@ -20,10 +20,10 @@ describe('getAllImages', () => {
     cleanup = setup.cleanup;
 
     // Create test images with specific tag combinations
-    imageWithNature = generateRandomImage(['nature']);
-    imageWithLandscape = generateRandomImage(['landscape']);
-    imageWithBothTags = generateRandomImage(['nature', 'landscape']);
-    imageWithNoTags = generateRandomImage([]);
+    imageWithNature = generateRandomImage(['nature'], '2026-02-03T02:10:35.657Z');
+    imageWithLandscape = generateRandomImage(['landscape'], '2026-02-03T02:11:35.657Z');
+    imageWithBothTags = generateRandomImage(['nature', 'landscape'], '2026-02-03T02:12:35.657Z');
+    imageWithNoTags = generateRandomImage([], '2026-02-03T02:13:35.657Z');
 
     mockEvent = {} as Electron.IpcMainInvokeEvent;
   });
@@ -35,18 +35,13 @@ describe('getAllImages', () => {
   it('should return all images when no filter is provided', async () => {
     const images = await getAllImages(mockEvent);
 
-    expect(images).toHaveLength(4);
-  });
-
-  it('should return images with required properties', async () => {
-    const images = await getAllImages(mockEvent);
-
-    const image = images[0];
-    expect(image).toHaveProperty('id');
-    expect(image).toHaveProperty('full_path');
-    expect(image).toHaveProperty('description');
-    expect(image).toHaveProperty('tags');
-    expect(Array.isArray(image.tags)).toBe(true);
+    // sorted by createdAt
+    expect(images).toEqual([
+      imageWithNoTags,
+      imageWithBothTags,
+      imageWithLandscape,
+      imageWithNature,
+    ]);
   });
 
   it('should return empty array when filtering by non-existent tag', async () => {
@@ -59,18 +54,15 @@ describe('getAllImages', () => {
   });
 
   describe('tag filtering with OR join type', () => {
-    it('should return images matching any of the specified tags', async () => {
+    it('should return images matching the tag when only one tag provided', async () => {
       const images = await getAllImages(mockEvent, {
         tags: ['nature'],
         joinType: 'or',
       });
 
-      // Should return imageWithNature and imageWithBothTags
+      // Should return imageWithBothTags, imageWithNature sorted by createdAt
       expect(images).toHaveLength(2);
-
-      const imageIds = images.map((img) => idToHex(img.id));
-      expect(imageIds).toContain(idToHex(imageWithNature.id));
-      expect(imageIds).toContain(idToHex(imageWithBothTags.id));
+      expect(images).toEqual([imageWithBothTags, imageWithNature ]);
     });
 
     it('should return images matching either tag when multiple tags provided', async () => {
@@ -79,18 +71,27 @@ describe('getAllImages', () => {
         joinType: 'or',
       });
 
-      // Should return imageWithNature, imageWithLandscape, and imageWithBothTags
+      // Should return imageWithBothTags, imageWithLandscape, and imageWithNature sorted by createdAt
       expect(images).toHaveLength(3);
-
-      const imageIds = images.map((img) => idToHex(img.id));
-      expect(imageIds).toContain(idToHex(imageWithNature.id));
-      expect(imageIds).toContain(idToHex(imageWithLandscape.id));
-      expect(imageIds).toContain(idToHex(imageWithBothTags.id));
-      expect(imageIds).not.toContain(idToHex(imageWithNoTags.id));
+      expect(images).toEqual([ imageWithBothTags, imageWithLandscape, imageWithNature]);
     });
   });
 
   describe('tag filtering with AND join type', () => {
+    it('should return images matching the tag when only one tag provided', async () => {
+      const images = await getAllImages(mockEvent, {
+        tags: ['landscape'],
+        joinType: 'and',
+      });
+
+      // Should return imageWithLandscape and imageWithBothTags
+      expect(images).toHaveLength(2);
+      expect(images).toEqual([
+        imageWithBothTags,
+        imageWithLandscape
+      ]);
+    });
+
     it('should return only images that have all specified tags', async () => {
       const images = await getAllImages(mockEvent, {
         tags: ['nature', 'landscape'],
@@ -99,21 +100,9 @@ describe('getAllImages', () => {
 
       // Should only return imageWithBothTags
       expect(images).toHaveLength(1);
-      expect(idToHex(images[0].id)).toBe(idToHex(imageWithBothTags.id));
-    });
 
-    it('should return images when filtering by single tag', async () => {
-      const images = await getAllImages(mockEvent, {
-        tags: ['landscape'],
-        joinType: 'and',
-      });
-
-      // Should return imageWithLandscape and imageWithBothTags
-      expect(images).toHaveLength(2);
-
-      const imageIds = images.map((img) => idToHex(img.id));
-      expect(imageIds).toContain(idToHex(imageWithLandscape.id));
-      expect(imageIds).toContain(idToHex(imageWithBothTags.id));
+      // tags are sorted alphabetically on return
+      expect(images[0]).toEqual(imageWithBothTags);
     });
   });
 
@@ -132,13 +121,12 @@ describe('getAllImages', () => {
   /**
    * Generates and persists a random image record with the specified tags.
    */
-  function generateRandomImage(tags: string[]): GeneratedImage {
+  function generateRandomImage(tags: string[], createdAt: string = new Date().toISOString()): GeneratedImage {
     const db = getDb();
     if (!db) {
       throw new Error('Database not initialized');
     }
 
-    const now = new Date().toISOString();
     const id = Buffer.from(faker.string.uuid().replace(/-/g, ''), 'hex');
 
     const imageData = {
@@ -154,8 +142,8 @@ describe('getAllImages', () => {
       image_taken_at: faker.date.past().toISOString(),
       file_created_at: faker.date.past().toISOString(),
       file_last_modified: faker.date.recent().toISOString(),
-      created_at: now,
-      updated_at: now,
+      created_at: createdAt,
+      updated_at: new Date().toISOString(),
     };
 
     const insertImageStmt = db.prepare(`
@@ -198,6 +186,7 @@ describe('getAllImages', () => {
   `);
 
     for (const tagName of tags) {
+      const now = new Date().toISOString();
       insertTagStmt.run(tagName, now, now);
       const tagRow = getTagIdStmt.get(tagName) as { id: number };
       insertJoinStmt.run(imageData.id, tagRow.id, now);
@@ -212,15 +201,7 @@ describe('getAllImages', () => {
       text_contents: imageData.text_contents,
       created_at: imageData.created_at,
       updated_at: imageData.updated_at,
-      tags,
+      tags: tags.sort(), // sort tags to make comparing easier as they will be sorted when fetched
     };
-  }
-
-  // Helper to convert Buffer id to hex string for comparison
-  function idToHex(id: Buffer | string): string {
-    if (Buffer.isBuffer(id)) {
-      return id.toString('hex');
-    }
-    return String(id);
   }
 });
