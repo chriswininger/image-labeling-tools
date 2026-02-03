@@ -11,6 +11,7 @@ interface ImageRow {
   full_path: string;
   description: string;
   short_title: string | null;
+  tags: string [];
   thumb_nail_name: string | null;
   text_contents: string | null;
   created_at: string;
@@ -39,13 +40,17 @@ export const getAllImages = async (
     const stmt = db.prepare(query);
     const images: ImageRow[] = stmt.all(...params);
 
+    return images;
+
+    /*
     // Get all image IDs to fetch their tags
     const imageIds = images.map((img) => img.id);
 
     if (imageIds.length === 0) {
       return [];
-    }
+    }*/
 
+    /*
     // Fetch all tags for these images in a single query
     const tagsQuery = `
       SELECT iitj.image_info_id, t.tag_name
@@ -71,7 +76,7 @@ export const getAllImages = async (
     return images.map((image) => ({
       ...image,
       tags: tagsByImageId.get(idToString(image.id)) || [],
-    }));
+    }));*/
   } catch (error) {
     console.error('Error fetching images:', error);
     throw error;
@@ -94,7 +99,10 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
     return [`
         SELECT
             ${getIncludedImageInfoAttributes()}
-        FROM image_info ii
+        FROM image_info
+        LEFT JOIN image_info_tag_join iitj ON image_info.id = iitj.image_info_id
+        LEFT JOIN tags ON iitj.tag_id = tags.id
+        GROUP BY image_info.id
         ${getOrderByClause()}
     `, []];
   }
@@ -112,15 +120,17 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
       return [`
           SELECT
               ${getIncludedImageInfoAttributes()}
-          FROM image_info ii
-                   INNER JOIN (
-              SELECT iitj_filter.image_info_id
-              FROM image_info_tag_join iitj_filter
-                       INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-              WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-              GROUP BY iitj_filter.image_info_id
-              HAVING COUNT(DISTINCT t_filter.tag_name) = ?
-          ) filtered ON ii.id = filtered.image_info_id
+          FROM image_info INNER JOIN (
+            SELECT iitj_filter.image_info_id
+            FROM image_info_tag_join iitj_filter
+                   INNER JOIN tags  ON iitj_filter.tag_id = tags.id
+            WHERE tags.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+            GROUP BY iitj_filter.image_info_id
+            HAVING COUNT(DISTINCT tags.tag_name) =  ?
+          ) filtered_tags ON image_info.id = filtered_tags.image_info_id
+                          LEFT JOIN image_info_tag_join  ON image_info.id = image_info_tag_join.image_info_id
+                          LEFT JOIN tags ON image_info_tag_join.tag_id = tags.id
+          GROUP BY image_info.id
           ${getOrderByClause()}
       `, params];
     case 'or':
@@ -128,31 +138,36 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
       return [`
           SELECT
               ${getIncludedImageInfoAttributes()}
-          FROM image_info ii
-                   INNER JOIN (
-              SELECT DISTINCT iitj_filter.image_info_id
-              FROM image_info_tag_join iitj_filter
-                       INNER JOIN tags t_filter ON iitj_filter.tag_id = t_filter.id
-              WHERE t_filter.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
-          ) filtered ON ii.id = filtered.image_info_id
+          FROM image_info INNER JOIN (
+            SELECT iitj_filter.image_info_id
+            FROM image_info_tag_join iitj_filter
+                   INNER JOIN tags  ON iitj_filter.tag_id = tags.id
+            WHERE tags.tag_name IN (${filterOptions.tags.map(() => '?').join(', ')})
+            GROUP BY iitj_filter.image_info_id
+          ) filtered_tags ON image_info.id = filtered_tags.image_info_id
+                          LEFT JOIN image_info_tag_join  ON image_info.id = image_info_tag_join.image_info_id
+                          LEFT JOIN tags ON image_info_tag_join.tag_id = tags.id
+          GROUP BY image_info.id
           ${getOrderByClause()}
       `, params];
   }
 }
 
 function getOrderByClause(): string {
-  return 'ORDER BY ii.created_at DESC';
+  return 'ORDER BY image_info.created_at DESC';
 }
 
 function getIncludedImageInfoAttributes(): string {
   return `
-            ii.id,
-            ii.full_path,
-            ii.description,
-            ii.short_title,
-            ii.thumb_nail_name,
-            ii.text_contents,
-            ii.created_at,
-            ii.updated_at
+    image_info.id,
+    image_info.full_path,
+    image_info.description,
+    image_info.short_title,
+    COALESCE(JSON_GROUP_ARRAY(tags.tag_name ORDER BY tags.tag_name), '[]') as tags,
+    image_info.thumb_nail_name,
+    image_info.text_contents,
+    image_info.created_at,
+    image_info.updated_at
   `
 }
+
