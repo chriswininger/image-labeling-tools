@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { loadDatabase, setDb, closeDb, getDb } from '../shared/database';
+import { setDb, closeDb, getDb } from '../shared/database';
+import Database from "better-sqlite3";
 
 const TEST_DATA_DIR = path.join(__dirname, '../../test-data');
 const TEST_RUN_DIR = path.join(TEST_DATA_DIR, 'test-run');
@@ -25,9 +26,7 @@ export function setupTestDatabase(): { dbPath: string; cleanup: () => void } {
   fs.copyFileSync(SOURCE_DB, testDbPath);
 
   // Initialize the database connection
-  const Database = loadDatabase();
-  const db = new Database(testDbPath);
-  setDb(db);
+  setDb(new Database(testDbPath));
 
   return {
     dbPath: testDbPath,

@@ -1,17 +1,12 @@
-// Shared database module for main process
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let db: any = null;
+import { Database } from "better-sqlite3";
 
-// Lazy load better-sqlite3 to avoid bundling issues with Vite
-export const loadDatabase = () => {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require('better-sqlite3');
+let db: Database | null = null;
+
+export const getDb = (): Database | null => {
+  return db
 };
 
-export const getDb = () => db;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const setDb = (database: any) => {
+export const setDb = (database: Database) => {
   db = database;
 };
 

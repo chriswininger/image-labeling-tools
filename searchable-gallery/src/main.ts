@@ -2,8 +2,9 @@ import { app, BrowserWindow, ipcMain, protocol, Menu, MenuItemConstructorOptions
 import path from 'node:path';
 import fs from 'fs';
 import started from 'electron-squirrel-startup';
-import { loadDatabase, getDb, setDb, closeDb } from './shared/database';
+import { getDb, setDb, closeDb } from './shared/database';
 import { getAllImages, getAllTags, getThumbnailPath, getImageData } from './fetch-handlers';
+import Database from 'better-sqlite3';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -61,8 +62,7 @@ const initDatabase = () => {
 
       if (fs.existsSync(normalizedPath)) {
         console.log(`Database file exists at: ${normalizedPath}`);
-        const DB = loadDatabase();
-        setDb(new DB(normalizedPath));
+        setDb(new Database(normalizedPath));
         console.log('✅ Database connected successfully at:', normalizedPath);
         return;
       } else {
