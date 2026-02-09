@@ -6,23 +6,6 @@ interface FilterOptions {
   joinType?: 'and' | 'or';
 }
 
-interface ImageRow {
-  id: Buffer | string;
-  full_path: string;
-  description: string;
-  short_title: string | null;
-  tags: string [];
-  thumb_nail_name: string | null;
-  text_contents: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ImageTagRow {
-  image_info_id: Buffer | string;
-  tag_name: string;
-}
-
 export const getAllImages = async (
   _event: Electron.IpcMainInvokeEvent,
   filterOptions?: FilterOptions
@@ -38,45 +21,11 @@ export const getAllImages = async (
     console.log('run query: ', query);
     console.log('params: ', params);
     const stmt = db.prepare(query);
-    const images: ImageRow[] = stmt.all(...params);
 
-    return images;
-
-    /*
-    // Get all image IDs to fetch their tags
-    const imageIds = images.map((img) => img.id);
-
-    if (imageIds.length === 0) {
-      return [];
-    }*/
-
-    /*
-    // Fetch all tags for these images in a single query
-    const tagsQuery = `
-      SELECT iitj.image_info_id, t.tag_name
-      FROM image_info_tag_join iitj
-      INNER JOIN tags t ON iitj.tag_id = t.id
-      WHERE iitj.image_info_id IN (${imageIds.map(() => '?').join(', ')})
-      ORDER BY t.tag_name ASC
-    `;
-    const tagsStmt = db.prepare(tagsQuery);
-    const imageTags: ImageTagRow[] = tagsStmt.all(...imageIds);
-
-    // Build a map of image_id -> tags array
-    // Note: id is stored as BLOB in SQLite, so we convert to string for Map key comparison
-    const tagsByImageId = new Map<string, string[]>();
-    for (const row of imageTags) {
-      const idKey = idToString(row.image_info_id);
-      const existing = tagsByImageId.get(idKey) || [];
-      existing.push(row.tag_name);
-      tagsByImageId.set(idKey, existing);
-    }
-
-    // Combine images with their tags
-    return images.map((image) => ({
-      ...image,
-      tags: tagsByImageId.get(idToString(image.id)) || [],
-    }));*/
+    return  stmt.all(...params).map((row: any) => ({
+      ...row,
+      tags: JSON.parse(row.tags),
+    }));
   } catch (error) {
     console.error('Error fetching images:', error);
     throw error;
@@ -98,7 +47,7 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
   if (isNullOrUndefined(filterOptions?.tags) || filterOptions.tags.length == 0) {
     return [`
         SELECT
-            ${getIncludedImageInfoAttributes()}
+            ${getColumns()}
         FROM image_info
         LEFT JOIN image_info_tag_join iitj ON image_info.id = iitj.image_info_id
         LEFT JOIN tags ON iitj.tag_id = tags.id
@@ -119,7 +68,7 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
 
       return [`
           SELECT
-              ${getIncludedImageInfoAttributes()}
+              ${getColumns()}
           FROM image_info INNER JOIN (
             SELECT iitj_filter.image_info_id
             FROM image_info_tag_join iitj_filter
@@ -137,7 +86,7 @@ function getBaseQuery(filterOptions?: FilterOptions): QueryWithParams {
       // For OR: images must have AT LEAST ONE of the specified tags
       return [`
           SELECT
-              ${getIncludedImageInfoAttributes()}
+              ${getColumns()}
           FROM image_info INNER JOIN (
             SELECT iitj_filter.image_info_id
             FROM image_info_tag_join iitj_filter
@@ -157,13 +106,13 @@ function getOrderByClause(): string {
   return 'ORDER BY image_info.created_at DESC';
 }
 
-function getIncludedImageInfoAttributes(): string {
+function getColumns(): string {
   return `
     image_info.id,
     image_info.full_path,
     image_info.description,
     image_info.short_title,
-    COALESCE(JSON_GROUP_ARRAY(tags.tag_name ORDER BY tags.tag_name), '[]') as tags,
+    COALESCE(JSON_GROUP_ARRAY(tags.tag_name ORDER BY tags.tag_name) FILTER (WHERE tags.tag_name IS NOT NULL), '[]') as tags,
     image_info.thumb_nail_name,
     image_info.text_contents,
     image_info.created_at,
