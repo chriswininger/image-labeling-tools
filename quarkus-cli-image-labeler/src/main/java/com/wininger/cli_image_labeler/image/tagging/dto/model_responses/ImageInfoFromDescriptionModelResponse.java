@@ -15,5 +15,8 @@ public record ImageInfoFromDescriptionModelResponse(
     String shortTitle,
 
     @Description("Briefly explain whether the image contains any visible text and what that text is about (e.g., 'Contains a sign reading Welcome', 'Shows a book page with paragraphs of text', 'Is an explanation a concept', 'No visible text'). REQUIRED field.")
-    String doesContainText
+    String doesContainText,
+
+    @Description("A boolean value indicating if there was any readable tex in the image (true/false). REQUIRED field.")
+    Boolean hasText
 ) {}

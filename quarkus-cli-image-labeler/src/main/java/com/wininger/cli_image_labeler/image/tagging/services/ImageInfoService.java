@@ -18,13 +18,9 @@ import com.wininger.cli_image_labeler.image.tagging.dto.model_responses.ImageInf
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ExceededRetryLimitForModelRequest;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageReadException;
 import com.wininger.cli_image_labeler.image.tagging.exceptions.ImageWriteException;
-import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.memory.ChatMemory;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ResponseFormat;
 import dev.langchain4j.model.chat.request.ResponseFormatType;
@@ -66,8 +62,6 @@ public class ImageInfoService
 
   private final OllamaChatModel imageInfoFromDescriptionModel;
 
-  private final SimilarityService similarityService;
-
   private final ImageInfoFromDescriptionService imageInfoFromDescriptionService;
 
   private final boolean logRequests;
@@ -103,8 +97,6 @@ public class ImageInfoService
           return req;
         })
         .build();
-
-    this.similarityService = similarityService;
   }
 
   public ImageInfo generateImageInfoAndMetadata(final String imagePath, final boolean keepThumbnails) {
@@ -132,7 +124,7 @@ public class ImageInfoService
     System.out.println("Extracting structured info from description...");
     final ImageInfoFromDescriptionModelResponse extractedInfo = extractImageInfoFromDescription(detailedDescription, imagePath);
 
-    final boolean isText = isText(extractedInfo.doesContainText());
+    final boolean isText = extractedInfo.hasText(); //isText(extractedInfo.doesContainText());
     final List<String> normalizedTags = normalizeTags(extractedInfo, isText);
 
     // Step 3: Extract file metadata (GPS location and date taken)
@@ -336,8 +328,10 @@ public class ImageInfoService
     final TextContent prompt = TextContent.from(
         "Please provide a complete and thorough description of this image. " +
         "Include all relevant details about the subjects, setting, colors, composition, " +
-        "and any text or notable elements visible in the image."
-    );
+        "and any text or notable elements visible in the image. Include a line which " +
+        "describes clearly if the image does or does not contain readable text. Only describe it as " +
+        "including text if the text is legible.");
+
     final UserMessage userMessage = UserMessage.from(imageContent, prompt);
     final ChatResponse chatResponse = unstructuredModel.chat(userMessage);
 
@@ -373,17 +367,5 @@ public class ImageInfoService
       .filter(str  -> !str.isBlank())
       .sorted()
       .toList();
-  }
-
-  public boolean isText(final String textReasoning) {
-    final double noTextSimilarity = similarityService.calculateSimilarity(textReasoning, "No visible text");
-    final double isTextSimilarity = similarityService.calculateSimilarity(textReasoning, "The image contains text content");
-
-    // TODO: Make these debug level logging
-    System.out.println("text reasoning: " + textReasoning);
-    System.out.println("noTextSimilarity: " + noTextSimilarity);
-    System.out.println("isTestSimilarity: " + isTextSimilarity);
-
-    return isTextSimilarity > noTextSimilarity;
   }
 }

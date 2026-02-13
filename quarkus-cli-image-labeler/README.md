@@ -1,13 +1,19 @@
 quarkus-cli-image-labeler
 ===============================
 
-
-
-# Developers
-
 ## Building
 
 Quick Build (no tests): `./gradlew build -x test`
+
+## Models Used
+
+These models need to be available in ollama
+
+* gemma3:4b: For image description and tagging
+* deepseek-ocr:3b: For OCR, currently disabled
+* nomic-embed-text: For semantic similarity calculations
+
+example: `ollama pull nomic-embed-text`
 
 ## Running Examples
 
