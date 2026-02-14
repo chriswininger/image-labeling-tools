@@ -5,12 +5,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.imageio.ImageIO;
 
 import com.wininger.cli_image_labeler.image.tagging.dto.*;
@@ -345,7 +342,23 @@ public class ImageInfoService
       return null;
     }
 
-    final List<String> rawTags = new ArrayList<>(modelResponse.tags());
+    // create a copy of the list while performing our first bit of normalization
+    final List<String> rawTags = modelResponse.tags().stream()
+            // this fixes cases where individual tags get output as comma separated lists
+            // "dog, man" becomes "dog", "man"
+            .flatMap(tag -> Arrays.stream(tag.split(",")))
+            .map(String::trim)
+            // this takes cases where we have multiple words in a tag and generates individual tags from them
+            // "huge chicken" becomes "huge chicken", "huge", "chicken"
+            .flatMap(tag -> {
+              String[] words = tag.split("\\s+");
+              if (words.length > 1) {
+                return Stream.concat(Stream.of(tag), Arrays.stream(words));
+              }
+              return Stream.of(tag);
+            })
+            .filter(tag -> !tag.isEmpty())
+            .collect(Collectors.toList());
 
     // ensure text is a label (don't worry if it's already there, next step is de-duplication)
     if (isText) {
@@ -357,8 +370,8 @@ public class ImageInfoService
       rawTags.add(PERSON_TAG);
     }
 
-    // Deduplicate tags;
     // Convert to lowercase;
+    // Deduplicate tags;
     // Sort alphabetically
     return new HashSet<>(
       // convert to lowercase before de-duplicating

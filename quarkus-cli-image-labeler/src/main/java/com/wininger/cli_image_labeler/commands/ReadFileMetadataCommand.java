@@ -37,6 +37,7 @@ public class ReadFileMetadataCommand implements Runnable {
 
         } catch (ImageProcessingException e) {
             System.err.println("Error processing image: " + e.getMessage());
+            System.out.println(e.getCause());
         } catch (IOException e) {
             System.err.println("Error reading file: " + e.getMessage());
         }
