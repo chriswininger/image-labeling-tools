@@ -1,11 +1,43 @@
 quarkus-cli-image-labeler
 ===============================
 
+This is a command line application used to generate tags and descriptions of images. It also captures image metadata.
+It can output this data over standard out or persist it to a SQLite database.
+
+For more information see: [Usage.md](Usage.md)
+
 ## Building
 
-Quick Build (no tests): `./gradlew build -x test`
+Build the application:
+```shell script
+./gradlew build
+```
+or  (no tests)
+```shell script
+./gradlew build -x test
+```
+Run the publish script (keeps the frontend schema up to date for integration tests):
 
-## Models Used
+```shell script
+./publish-test-database-for-searchable-gallery.sh
+```
+
+### Populate a SQLite database with image information for a directory or individual image
+`java -jar ./build/quarkus-app/quarkus-run.jar write-tags-to-local-db ~/Pictures/test-images/`
+
+## Schema Changes
+When you make changes to the database schema via migrations in this module, you need to publish those changes to the 
+`searchable-gallery` module for integration testing.
+
+To publish them run `./publish-test-database-for-searchable-gallery.sh`
+
+## Dependencies
+This project uses:
+* [Quarkus](https://quarkus.io/).
+* ([guide](https://quarkus.io/guides/picocli)).
+* Ollama (see more below)
+
+### Ollama
 
 These models need to be available in ollama
 
@@ -15,55 +47,12 @@ These models need to be available in ollama
 
 example: `ollama pull nomic-embed-text`
 
-## Running Examples
+For more information on OLLAMA setup and management see: [Ollama_Notes.md](Ollama_Notes.md)
 
-### Populate a SqlLite database with image information for a directory or individual image
-`java -jar ./build/quarkus-app/quarkus-run.jar write-tags-to-local-db ~/Pictures/test-images/`
+## Notes about Packaging and running the application
 
-## Schema Changes
+Building produces `quarkus-run.jar` file in the `build/quarkus-app/` directory.
 
-When you make changes to the database schema via migrations in this module, you need to publish those changes to the 
-`searchable-gallery` module for integration testing.
-
-To publish them run `./publish-test-database-for-searchable-gallery.sh`
-
-## Quarkus
-
-This project uses [Quarkus](https://quarkus.io/).
-
-1. First, build the application:
-
-```shell script
-./gradlew build
-```
-
-2. Run the publish script to apply migrations to the test database:
-
-```shell script
-./publish-test-database-for-searchable-gallery.sh
-```
-
-This script runs the migrations against `../searchable-gallery/test-data/` so that the frontend tests use an up-to-date schema.
-
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live coding using:
-
-```shell script
-./gradlew quarkusDev
-```
-
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
-
-## Packaging and running the application
-
-The application can be packaged using:
-
-```shell script
-./gradlew build
-```
-
-It produces the `quarkus-run.jar` file in the `build/quarkus-app/` directory.
 Be aware that it’s not an _über-jar_ as the dependencies are copied into the `build/quarkus-app/lib/` directory.
 
 The application is now runnable using `java -jar build/quarkus-app/quarkus-run.jar`.
@@ -93,23 +82,3 @@ Or, if you don't have GraalVM installed, you can run the native executable build
 You can then execute your native executable with: `./build/quarkus-cli-image-labeler-1.0.0-SNAPSHOT-runner`
 
 If you want to learn more about building native executables, please consult <https://quarkus.io/guides/gradle-tooling>.
-
-## Related Guides
-
-- Picocli ([guide](https://quarkus.io/guides/picocli)): Develop command line applications with Picocli
-
-## Provided Code
-
-### Picocli Example
-
-Hello and goodbye are civilization fundamentals. Let's not forget it with this example picocli application by changing the <code>command</code> and <code>parameters</code>.
-
-[Related guide section...](https://quarkus.io/guides/picocli#command-line-application-with-multiple-commands)
-
-Also for picocli applications the dev mode is supported. When running dev mode, the picocli application is executed and on press of the Enter key, is restarted.
-
-As picocli applications will often require arguments to be passed on the commandline, this is also possible in dev mode via:
-
-```shell script
-./gradlew quarkusDev --quarkus-args='Quarky'
-```

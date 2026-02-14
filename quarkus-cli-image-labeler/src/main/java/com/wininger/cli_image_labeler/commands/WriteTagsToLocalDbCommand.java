@@ -17,9 +17,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -36,6 +41,9 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
     @Option(names = "--update-existing", description = "Update existing database entries and regenerate thumbnails")
     boolean updateExisting;
+
+    @Option(names = "--parallelism", description = "Number of parallel image processors (default: ${DEFAULT-VALUE})", defaultValue = "1")
+    int parallelism;
 
     private final ImageInfoService imageInfoService;
     private final ImageInfoRepository imageTagRepository;
@@ -83,28 +91,42 @@ public class WriteTagsToLocalDbCommand implements Runnable {
     }
 
     private void processDirectory(final Path directory, final String failLogName, final long startTime) {
-        try (Stream<Path> paths = Files.walk(directory)) {
-            final long totalImages = paths
-                .filter(Files::isRegularFile)
-                .filter(this::isImageFile)
-                .count();
+        final ExecutorService pool = Executors.newFixedThreadPool(parallelism);
 
-            System.out.println("Found " + totalImages + " image(s) to process");
-
-            try (Stream<Path> imagePaths = Files.walk(directory)) {
-                final long[] processed = {0};
-                imagePaths
+        try {
+            final List<Path> imageFiles;
+            try (Stream<Path> paths = Files.walk(directory)) {
+                imageFiles = paths
                     .filter(Files::isRegularFile)
                     .filter(this::isImageFile)
-                    .forEach(imagePath -> {
-                        processImage(imagePath, failLogName);
-                        processed[0]++;
-                        System.out.println("Progress: " + processed[0] + "/" + totalImages);
-                    });
+                    .collect(Collectors.toList());
+            }
+
+            final int totalImages = imageFiles.size();
+            final AtomicInteger processed = new AtomicInteger(0);
+            System.out.println("Found " + totalImages + " image(s) to process with parallelism=" + parallelism);
+
+            final List<Future<?>> futures = new ArrayList<>();
+            for (final Path imagePath : imageFiles) {
+                futures.add(pool.submit(() -> {
+                    processImage(imagePath, failLogName);
+                    System.out.println("Progress: " + processed.incrementAndGet() + "/" + totalImages);
+                }));
+            }
+
+            // Wait for all tasks to complete
+            for (final Future<?> future : futures) {
+                try {
+                    future.get();
+                } catch (Exception e) {
+                    System.err.println("Unexpected error: " + e.getMessage());
+                }
             }
         } catch (IOException e) {
             System.err.println("Error walking directory: " + e.getMessage());
             throw new RuntimeException("Failed to process directory", e);
+        } finally {
+            pool.shutdown();
         }
 
         System.out.printf("\n\nCompleted processing all images in: %s",
@@ -146,7 +168,7 @@ public class WriteTagsToLocalDbCommand implements Runnable {
             }
 
             // Save to database (requires request context)
-            saveImageToDatabase(fullPath, imageInfo, existing, startTime);
+            saveImageToDatabase(fullPath, imageInfo, existing != null, startTime);
 
         } catch (Exception e) {
             System.err.println("Error processing image " + imagePath + ": " + e.getMessage());
@@ -162,14 +184,14 @@ public class WriteTagsToLocalDbCommand implements Runnable {
 
     @ActivateRequestContext
     void saveImageToDatabase(final String fullPath, final ImageInfo imageInfo,
-                             final ImageInfoEntity existingFromPreviousContext, final long startTime) {
+                             final boolean isUpdate, final long startTime) {
         // Upsert all tags into the tags table and collect TagEntity objects
         final List<TagEntity> tagEntities = imageInfo.tags().stream()
             .map(tagRepository::upsertTag)
             .collect(Collectors.toList());
 
-        // Re-fetch the existing entity within this request context to avoid detached entity issues
-        final ImageInfoEntity existing = existingFromPreviousContext != null
+        // Fetch the existing entity within this request context if updating
+        final ImageInfoEntity existing = isUpdate
             ? imageTagRepository.findByFullPath(fullPath)
             : null;
 

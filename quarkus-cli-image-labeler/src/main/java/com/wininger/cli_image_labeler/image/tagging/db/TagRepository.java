@@ -6,6 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @ApplicationScoped
@@ -16,19 +17,17 @@ public class TagRepository {
 
     @Transactional
     public TagEntity upsertTag(final String tagName) {
-        // Try to find existing tag
-        TagEntity existing = findByTagName(tagName);
+        final String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
-        if (existing != null) {
-            // Update the updated_at timestamp
-            existing.setUpdatedAt(LocalDateTime.now());
-            return entityManager.merge(existing);
-        } else {
-            // Create new tag
-            TagEntity newTag = new TagEntity(tagName);
-            entityManager.persist(newTag);
-            return newTag;
-        }
+        entityManager.createNativeQuery(
+            "INSERT INTO tags (tag_name, created_at, updated_at) " +
+            "VALUES (:tagName, :now, :now) " +
+            "ON CONFLICT(tag_name) DO UPDATE SET updated_at = :now")
+            .setParameter("tagName", tagName)
+            .setParameter("now", now)
+            .executeUpdate();
+
+        return findByTagName(tagName);
     }
 
     @Transactional

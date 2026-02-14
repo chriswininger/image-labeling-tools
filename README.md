@@ -1,28 +1,44 @@
 Image Labeling Tools
 ====================
 
-I love how Google Photos makes your images searchable, but I hate uploading all my personal memories to the cloud. Given the wide availability of AI models, surely we can do this locally.
+I love that Google Photos makes images searchable, but I hate uploading my memories to the cloud. Given the
+availability of open-weight AI models, surely this can be done locally.
 
-Why can't I simply run a command on the terminal [is-pic-with-person ./my-img.jpeg](https://github.com/chriswininger/is-pic-with-person/tree/6afb00115e745a79f399c01df982e847cd403305) and get back a result that can be piped to other commands?
+Why can't I simply run a command [is-pic-with-person ./my-img.jpeg](https://github.com/chriswininger/is-pic-with-person/tree/6afb00115e745a79f399c01df982e847cd403305) and get results that can
+be piped to other commands?
 
-I've explored this 5 years ago with the models that were available then and had isPerson working fairly well, but those models were not very versatile. They output a static set of tags. Can modern multi-modal LLMs do better?
+I tried this 5 years ago with the models that were available then and had isPerson working, but it was not
+very versatile. The models output a static set of tags. If they weren't trained to tag lizard, for example, no lizards
+without retraining.
 
-This repo is going to be a catch-all to explore this question. As concepts mature they may split out into their own repos.
+Can modern multi-modal LLMs do better?
+
+This repository is a catch-all to explore this question. As concepts mature they may split out into their own repos.
+
+![Screenshot_2026-02-14_13-00-48-scale.png](searchable-gallery/readme-assets/Screenshot_2026-02-14_13-00-48.png)
 
 ## Structure
 
-### [quarkus-cli-image-labeler](./quarkus-cli-image-labeler):
+### [quarkus-cli-image-labeler](./quarkus-cli-image-labeler/README.md):
 
-A command line tool built in Java with Quarkus. It leverages langchain4j and the Ollama runtime to expose commands for labeling images.
+A command line tool built in Java with Quarkus. It leverages langchain4j and the Ollama runtime to expose commands for
+labeling images.
 
-If you run the command `generate-image-tags-for-directory` it will produce a SQLite database and thumbnail folder under the data directory. These can be copied to the data directory of [searchable-gallery](./searchable-gallery)
-and browsed visually.
+The command `write-tags-to-local-db`, for example creates SQLite database filled with tags and descriptions for all your
+images along with thumbnail sized copies of the images processed. This database can be read and display by
+[searchable-gallery](./searchable-gallery/README.md).
 
-### [searchable-gallery](./searchable-gallery)
+For more on using this tool see [the usage guide](./quarkus-cli-image-labeler/Usage.md).
 
-This uses the output from the command-line tool above, exposing a gallery that you can browse and search by tags.
+### [searchable-gallery](./searchable-gallery/README.md)
+
+A search gallery of images using the database produced by quarkus-cli-image-labeler. It allows you to search your
+images by tags
 
 ## Thoughts
 
-Eventually I may fuse some of these into a more coherent product, although the system requirements of these models make it a bit challenging. Ideally you'd have a daemon and some hooks into the file system to automatically process new images
-but this would eat a lot of system resources. So far I've been working with Gemma 3 (4B), which is much lighter for the quality than other models I've tried, but still not going to run well on a bargain basement PC.
+The system requirements of LLMs limit adoption of purely local AI solutions like this. This may change in the future,
+though with the current RAM crisis it may take time. That said for image labeling I have been having good luck using
+Gemma 3(4B) which seems to punch above its weight. It runs usable fast on a MacBook Pro with an M1, cheap, similarly
+on a laptop with and RTX 2070 and extremely well on an RTX 5070 TI. These are not bargain-basement PCs, but they are
+consumer grade.
